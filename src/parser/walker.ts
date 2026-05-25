@@ -158,15 +158,14 @@ function walkElement(
     if (childNode.nodeType === Node.TEXT_NODE) {
       const raw = childNode.textContent ?? ''
       if (raw.trim().length > 0) {
-        const textNode = buildLooseText(
+        const textNodes = buildLooseText(
           childNode as Text,
           cs,
           containerRect,
-          raw.trim(),
           idGen,
           fontRefs
         )
-        if (textNode !== null) children.push(textNode)
+        for (const n of textNodes) children.push(n)
       }
     } else if (childNode.nodeType === Node.ELEMENT_NODE) {
       const child = walkElement(
@@ -239,54 +238,130 @@ function buildText(
   }
 }
 
+// Returns one IRText per visual line. `Range.getBoundingClientRect()`
+// returns the union of all line boxes, which makes a wrapped text node
+// look like a tall block overlapping its inline siblings. We instead
+// inspect `Range.getClientRects()` (one rect per line) and split the
+// node's characters across lines by sampling each char's per-char range
+// midpoint Y.
 function buildLooseText(
   textNode: Text,
   parentCs: CSSStyleDeclaration,
   containerRect: DOMRect,
-  text: string,
   idGen: () => string,
   fontRefs: IRFontRef[]
-): IRText | null {
-  const range = textNode.ownerDocument?.createRange()
-  if (!range) return null
+): IRText[] {
+  const doc = textNode.ownerDocument
+  if (doc === null) return []
+
+  const range = doc.createRange()
   try {
     range.selectNode(textNode)
   } catch {
-    return null
+    return []
   }
-  const rect = range.getBoundingClientRect()
-  if (rect.width === 0 && rect.height === 0) return null
 
-  const layout: IRLayout = {
-    x: rect.left - containerRect.left,
-    y: rect.top - containerRect.top,
-    width: rect.width,
-    height: rect.height
-  }
+  const clientRects = Array.from(range.getClientRects()).filter(
+    (r) => r.width > 0 || r.height > 0
+  )
+  if (clientRects.length === 0) return []
+
+  const content = textNode.textContent ?? ''
+  const lines = splitTextNodeByLineRects(textNode, content, clientRects, doc)
 
   const fontSize = parseFloat(parentCs.fontSize) || 16
   const fontRef = extractFontRef(parentCs)
-  fontRefs.push(fontRef)
 
-  return {
-    type: 'text',
-    id: idGen(),
-    layout,
-    opacity: extractOpacity(parentCs),
-    hidden: false,
-    blendMode: extractBlendMode(parentCs),
-    zIndex: extractZIndex(parentCs),
-    characters: text,
-    fontFamily: fontRef.family,
-    fontSize,
-    fontWeight: fontRef.weight,
-    fontStyle: fontRef.style,
-    color: extractTextColor(parentCs),
-    letterSpacing: extractLetterSpacing(parentCs),
-    lineHeight: extractLineHeight(parentCs, fontSize),
-    textAlign: extractTextAlign(parentCs),
-    textDecoration: extractTextDecoration(parentCs)
+  const out: IRText[] = []
+  for (const line of lines) {
+    // Skip lines that are pure whitespace, but preserve leading/trailing
+    // whitespace in the characters of meaningful lines. The line's rect
+    // already covers the whitespace width — trimming the characters
+    // would make adjacent inline runs visually touch ("Pavel R.deployed"
+    // instead of "Pavel R. deployed").
+    if (line.text.trim().length === 0) continue
+    // Track font usage once per wrapped node, not per line (the line
+    // shares one parent style).
+    if (out.length === 0) fontRefs.push(fontRef)
+    out.push({
+      type: 'text',
+      id: idGen(),
+      layout: {
+        x: line.rect.left - containerRect.left,
+        y: line.rect.top - containerRect.top,
+        width: line.rect.width,
+        height: line.rect.height
+      },
+      opacity: extractOpacity(parentCs),
+      hidden: false,
+      blendMode: extractBlendMode(parentCs),
+      zIndex: extractZIndex(parentCs),
+      characters: line.text,
+      fontFamily: fontRef.family,
+      fontSize,
+      fontWeight: fontRef.weight,
+      fontStyle: fontRef.style,
+      color: extractTextColor(parentCs),
+      letterSpacing: extractLetterSpacing(parentCs),
+      lineHeight: extractLineHeight(parentCs, fontSize),
+      textAlign: extractTextAlign(parentCs),
+      textDecoration: extractTextDecoration(parentCs)
+    })
   }
+  return out
+}
+
+// Buckets the characters of a text node by which client rect (line)
+// their midpoint Y falls in. O(N) over text length, but real-world DOM
+// text nodes are short.
+function splitTextNodeByLineRects(
+  textNode: Text,
+  content: string,
+  lineRects: DOMRect[],
+  doc: Document
+): Array<{ text: string; rect: DOMRect }> {
+  if (lineRects.length === 1) {
+    return [{ text: content, rect: lineRects[0] }]
+  }
+
+  const lineTexts: string[] = lineRects.map(() => '')
+  const sorted = lineRects
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => a.r.top - b.r.top)
+
+  const charRange = doc.createRange()
+  for (let i = 0; i < content.length; i++) {
+    try {
+      charRange.setStart(textNode, i)
+      charRange.setEnd(textNode, i + 1)
+    } catch {
+      continue
+    }
+    const charRect = charRange.getBoundingClientRect()
+    const midY = charRect.top + charRect.height / 2
+
+    // Find the line rect whose vertical band contains midY. Fall back
+    // to the closest line by distance if the char midpoint lies between
+    // line boxes (rare with line-height > 1).
+    let chosen = sorted[0].i
+    let bestDist = Math.abs(midY - (sorted[0].r.top + sorted[0].r.height / 2))
+    for (let k = 1; k < sorted.length; k++) {
+      const l = sorted[k].r
+      if (midY >= l.top && midY <= l.bottom) {
+        chosen = sorted[k].i
+        bestDist = 0
+        break
+      }
+      const d = Math.abs(midY - (l.top + l.height / 2))
+      if (d < bestDist) {
+        bestDist = d
+        chosen = sorted[k].i
+      }
+    }
+    lineTexts[chosen] += content[i]
+  }
+
+  return lineRects.map((rect, i) => ({ text: lineTexts[i], rect }))
 }
 
 function buildImage(
