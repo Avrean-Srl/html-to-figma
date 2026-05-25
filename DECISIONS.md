@@ -144,3 +144,34 @@ A Fase 1, quando arriverà il flusso `IMPORT_DOCUMENT` (UI→main) con risposta 
 ### Conseguenze
 - `src/types/messages.ts` è l'unica fonte dei contratti UI↔main.
 - Aggiornare PROJECT.md §6 con nota "bridge/ TBD, non bloccante per Fase 0/1".
+
+---
+
+## D7 — Render harness: offscreen container, non iframe srcdoc
+
+**Data**: 2026-05-25
+**Status**: Locked per Fase 1.2, rivedibile in Fase 2
+
+### Decisione
+Il rendering dell'HTML utente avviene in un `<div>` offscreen (`position: fixed; left: -99999px`) appeso a `document.body` dell'iframe plugin, **non** in un iframe figlio con `srcdoc`. Vedi `src/parser/render.ts`.
+
+### Perché non iframe srcdoc
+Tentato per primo per isolation completa degli stili. Tre problemi pratici in Chromium:
+1. Race del `load` event: il browser carica `about:blank` quando l'iframe viene appeso, poi `srcdoc`. Un listener `{ once: true }` cattura il `load` di `about:blank` e `body` resta vuoto.
+2. Workaround complessi (poll su `readyState`, doppi listener, doc.write) sono fragili o deprecati.
+3. `srcdoc` con HTML vuoto/whitespace può non emettere `load` affatto → orchestrator hangs.
+
+Il container approach è quello già usato dai test del walker, robusto, e produce gli stessi risultati per il subset di proprietà che estraiamo (`getComputedStyle`, `getBoundingClientRect`, Range API per text nodes).
+
+### Trade-off accettato
+`<style>` nelle pasted HTML cascadano agli stili dell'UI plugin per la durata del rendering (<100ms tipico). `contain: layout style` blocca containment di layout ma **non** isola le regole CSS. Conseguenze:
+- Possibile flicker visivo del plugin UI durante l'import di HTML con CSS aggressivo (es. `* { color: red }`).
+- Non critico: import dura pochi ms e il container viene rimosso subito.
+
+### Quando rivedere
+Se utenti reali segnalano flicker o pollution durante import → upgrade a:
+- **Shadow DOM**: isolation CSS ma `getComputedStyle` ha comportamenti sottili con inheritance.
+- **Iframe sandboxed con `doc.open()/write()/close()`**: sincrono, niente race, ma `doc.write` è deprecato e potrebbe sparire.
+- **Iframe srcdoc con MutationObserver + timeout fallback**: complesso ma corretto.
+
+Aggiornare D7 con l'approccio scelto quando succede.
