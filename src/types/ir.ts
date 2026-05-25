@@ -11,6 +11,9 @@ export interface IRNodeBase {
   opacity: number
   hidden: boolean
   blendMode: IRBlendMode
+  // CSS z-index. 'auto' becomes 0. Mapper sorts siblings ascending so
+  // higher z-index ends up later in Figma's child list (= on top).
+  zIndex: number
 }
 
 // Matches CSS mix-blend-mode names. 1:1 mapping to Figma BlendMode
@@ -49,6 +52,9 @@ export interface IRFrame extends IRNodeBase {
   autoLayout: IRAutoLayout | null
   shadows: IRShadow[]
   stroke: IRStroke | null
+  // CSS overflow hidden / overflow-x hidden / overflow-y hidden -> true.
+  // Mapped to FrameNode.clipsContent.
+  clipsContent: boolean
 }
 
 export interface IRShadow {

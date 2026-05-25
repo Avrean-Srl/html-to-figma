@@ -19,6 +19,7 @@ function frame(overrides: Partial<IRFrame> = {}): IRFrame {
     opacity: 1,
     hidden: false,
     blendMode: 'normal',
+    zIndex: 0,
     sourceTag: 'div',
     fills: [],
     cornerRadius: [0, 0, 0, 0],
@@ -26,6 +27,7 @@ function frame(overrides: Partial<IRFrame> = {}): IRFrame {
     autoLayout: null,
     shadows: [],
     stroke: null,
+    clipsContent: false,
     ...overrides
   }
 }
@@ -38,6 +40,7 @@ function text(overrides: Partial<IRText> = {}): IRText {
     opacity: 1,
     hidden: false,
     blendMode: 'normal',
+    zIndex: 0,
     characters: 'X',
     fontFamily: 'Inter',
     fontSize: 16,

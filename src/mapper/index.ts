@@ -85,7 +85,15 @@ export async function materializeIR(
     nodesCreated++
 
     const ownHasAutoLayout = ir.autoLayout !== null
-    for (const child of ir.children) {
+    // CSS z-index: sort children ascending so higher z-index lands later
+    // in the child list (= on top in Figma). Stable sort preserves source
+    // order for ties, matching CSS painting semantics for siblings with
+    // the same z-index.
+    const orderedChildren =
+      ownHasAutoLayout
+        ? ir.children
+        : [...ir.children].sort((a, b) => a.zIndex - b.zIndex)
+    for (const child of orderedChildren) {
       const node = buildNode(
         child,
         ir.layout.x,

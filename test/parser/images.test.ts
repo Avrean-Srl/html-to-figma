@@ -11,6 +11,7 @@ function imageNode(src: string, status: IRImage['loadStatus'] = 'pending'): IRIm
     opacity: 1,
     hidden: false,
     blendMode: 'normal',
+    zIndex: 0,
     sourceUrl: src,
     bytes: null,
     loadStatus: status,
@@ -26,13 +27,15 @@ function makeDoc(image: IRImage): IRDocument {
     opacity: 1,
     hidden: false,
     blendMode: 'normal',
+    zIndex: 0,
     sourceTag: 'body',
     fills: [],
     cornerRadius: [0, 0, 0, 0],
     children: [image],
     autoLayout: null,
     shadows: [],
-    stroke: null
+    stroke: null,
+    clipsContent: false
   }
   return {
     viewportWidth: 1440,

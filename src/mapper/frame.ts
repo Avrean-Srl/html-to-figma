@@ -61,8 +61,9 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
   }
 
   // Phase 1 has no Auto Layout (D1 / Phase 2). Children are absolutely
-  // positioned within the parent frame.
-  frame.clipsContent = false
+  // positioned within the parent frame. clipsContent toggled in Phase 5
+  // from CSS overflow: hidden | clip.
+  frame.clipsContent = ir.clipsContent
 
   return frame
 }

@@ -12,6 +12,7 @@ import type {
 import { extractAutoLayout } from './auto-layout'
 import {
   extractBlendMode,
+  extractClipsContent,
   extractCornerRadius,
   extractFills,
   extractFontRef,
@@ -23,6 +24,7 @@ import {
   extractTextAlign,
   extractTextColor,
   extractTextDecoration,
+  extractZIndex,
   hasFrameWorthyStyling,
   isHidden
 } from './styles'
@@ -86,13 +88,15 @@ export function walkDocument(
     opacity: 1,
     hidden: false,
     blendMode: 'normal',
+    zIndex: 0,
     sourceTag: 'body',
     fills: extractFills(bodyCs),
     cornerRadius: [0, 0, 0, 0],
     children,
     autoLayout: null,
     shadows: [],
-    stroke: null
+    stroke: null,
+    clipsContent: false
   }
 
   return {
@@ -192,13 +196,15 @@ function buildFrame(
     opacity: extractOpacity(cs),
     hidden: false,
     blendMode: extractBlendMode(cs),
+    zIndex: extractZIndex(cs),
     sourceTag: tag,
     fills: extractFills(cs),
     cornerRadius: extractCornerRadius(cs),
     children,
     autoLayout: extractAutoLayout(cs),
     shadows: extractShadows(cs),
-    stroke: extractStroke(cs)
+    stroke: extractStroke(cs),
+    clipsContent: extractClipsContent(cs)
   }
 }
 
@@ -219,6 +225,7 @@ function buildText(
     opacity: extractOpacity(cs),
     hidden: false,
     blendMode: extractBlendMode(cs),
+    zIndex: extractZIndex(cs),
     characters: text,
     fontFamily: fontRef.family,
     fontSize,
@@ -268,6 +275,7 @@ function buildLooseText(
     opacity: extractOpacity(parentCs),
     hidden: false,
     blendMode: extractBlendMode(parentCs),
+    zIndex: extractZIndex(parentCs),
     characters: text,
     fontFamily: fontRef.family,
     fontSize,
@@ -311,6 +319,7 @@ function buildImage(
     opacity: extractOpacity(cs),
     hidden: false,
     blendMode: extractBlendMode(cs),
+    zIndex: extractZIndex(cs),
     sourceUrl: el.src,
     bytes: null,
     loadStatus: status,
@@ -343,6 +352,7 @@ function buildSvg(
     opacity: extractOpacity(cs),
     hidden: false,
     blendMode: extractBlendMode(cs),
+    zIndex: extractZIndex(cs),
     svg: el.outerHTML
   }
 }

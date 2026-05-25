@@ -109,6 +109,23 @@ export function isHidden(cs: CSSStyleDeclaration): boolean {
   return cs.display === 'none' || cs.visibility === 'hidden'
 }
 
+export function extractZIndex(cs: CSSStyleDeclaration): number {
+  if (cs.zIndex === 'auto' || cs.zIndex === '') return 0
+  const n = parseInt(cs.zIndex, 10)
+  return Number.isNaN(n) ? 0 : n
+}
+
+export function extractClipsContent(cs: CSSStyleDeclaration): boolean {
+  return (
+    cs.overflow === 'hidden' ||
+    cs.overflow === 'clip' ||
+    cs.overflowX === 'hidden' ||
+    cs.overflowX === 'clip' ||
+    cs.overflowY === 'hidden' ||
+    cs.overflowY === 'clip'
+  )
+}
+
 export function extractShadows(cs: CSSStyleDeclaration): IRShadow[] {
   return parseBoxShadow(cs.boxShadow)
 }

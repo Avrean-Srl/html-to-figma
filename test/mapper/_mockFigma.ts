@@ -65,6 +65,7 @@ function makeNode(
       this.width = w
       this.height = h
     },
+    clipsContent: false,
     appendChild(child) {
       if (child.parent !== null) {
         const idx = child.parent.children.indexOf(child)
