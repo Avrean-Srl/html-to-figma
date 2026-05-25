@@ -197,7 +197,7 @@ function Plugin() {
       <TextboxMultiline
         value={html}
         onValueInput={setHtml}
-        rows={14}
+        rows={7}
         placeholder="<div style='padding: 16px; background: #f0f0f0'>Hello</div>"
       />
       <VerticalSpace space="medium" />
@@ -392,7 +392,17 @@ function Footer() {
         lineHeight: '14px'
       }}
     >
-      <span>v0.1.0  ·  by Avrean</span>
+      <span>
+        v0.1.0  ·  by{' '}
+        <a
+          href="https://redergo.com"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: 'inherit', textDecoration: 'none' }}
+        >
+          Redergo
+        </a>
+      </span>
       <a
         href="https://github.com/Avrean-Srl/html-to-figma"
         target="_blank"
