@@ -91,17 +91,17 @@ Procedere **una fase alla volta**, non saltare avanti. Ogni fase deve essere fun
 - [x] Vitest configurato (browser mode con Playwright + Chromium headless, vedi DECISIONS.md D2)
 - [x] Tipi condivisi in `src/types/ir.ts` (`IRNode` discriminated union, `IRDocument` envelope, color in 0-1, `Uint8Array` per immagini, `loadStatus` per propagare CORS failures)
 
-### Fase 1 — MVP "rettangoli e testo"
+### Fase 1 — MVP "rettangoli e testo" ✅ COMPLETATA
 Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo qualcosa di riconoscibile in Figma.
-- [ ] UI: textarea per incollare HTML, bottone "Import"
-- [ ] Rendering nascosto dell'HTML in `<div>` invisibile dell'iframe
-- [ ] Walker DOM ricorsivo
-- [ ] Estrazione subset minimo di computed styles (~15 proprietà: width, height, x, y derivate, background-color, color, font-family, font-size, font-weight, padding, margin, display)
-- [ ] Costruzione IR
-- [ ] Mapper main thread: div → Frame, span/p/h1-6 → TextNode
-- [ ] Font loading con `figma.loadFontAsync`, fallback su Inter se font non disponibile
-- [ ] Layout assoluto (no Auto Layout ancora)
-- [ ] Test su 5 HTML campione
+- [x] UI: textarea per incollare HTML, bottone "Import" (Phase 1.1)
+- [x] Rendering nascosto dell'HTML in `<div>` invisibile dell'iframe (Phase 1.2, container offscreen — vedi DECISIONS.md D7)
+- [x] Walker DOM ricorsivo (Phase 1.2, con regola `hasFrameWorthyStyling` per preservare frame su leaf con styling visivo)
+- [x] Estrazione subset minimo di computed styles (Phase 1.2, in `src/parser/styles.ts`)
+- [x] Costruzione IR (Phase 1.2, `IRDocument` con `IRNode` discriminated union)
+- [x] Mapper main thread: div → Frame, span/p/h1-6 → TextNode (Phase 1.3)
+- [x] Font loading con `figma.loadFontAsync`, fallback su Inter se font non disponibile (Phase 1.3, cascade 4-step in `src/mapper/fonts.ts`)
+- [x] Layout assoluto (no Auto Layout ancora) (Phase 1.3, parent-relative coords applicate nell'orchestrator)
+- [x] Test su 5 HTML campione (Phase 1.4, fixture Tailwind-style in `test/fixtures/`: card, navbar, hero, form, pricing-grid; 44/44 test totali)
 
 ### Fase 2 — Auto Layout intelligente
 - [ ] Detect `display: flex` → Auto Layout (direction, gap, padding, primaryAxisAlign, counterAxisAlign)
@@ -306,5 +306,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 completata (6/6 checkbox). Pronti per Fase 1. Decisioni D1-D6 chiuse in DECISIONS.md.
+**Stato**: Fase 0 + Fase 1 completate. 44/44 test verde. Plugin imports HTML → Figma frame+text con fills, padding, corner radius, font loading con fallback. Decisioni D1-D7 chiuse in DECISIONS.md. Pronti per Fase 2 (Auto Layout).
 **Ultima revisione**: 2026-05-25
