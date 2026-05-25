@@ -94,8 +94,31 @@ export interface IRSvg extends IRNodeBase {
   svg: string
 }
 
-export interface IRFill {
+export type IRFill = IRSolidFill | IRGradientFill
+
+export interface IRSolidFill {
   type: 'solid'
+  color: IRColor
+}
+
+export interface IRGradientFill {
+  type: 'gradient'
+  gradient: IRGradient
+}
+
+export interface IRGradient {
+  // 'linear' and 'radial' are mapped to Figma's GRADIENT_LINEAR /
+  // GRADIENT_RADIAL. Conic/diamond deferred.
+  kind: 'linear' | 'radial'
+  // CSS angle in degrees (0 = to top, 90 = to right, 180 = to bottom,
+  // 270 = to left). Ignored for radial (always centered, farthest-corner).
+  angle: number
+  stops: IRGradientStop[]
+}
+
+export interface IRGradientStop {
+  // Normalized 0-1.
+  position: number
   color: IRColor
 }
 

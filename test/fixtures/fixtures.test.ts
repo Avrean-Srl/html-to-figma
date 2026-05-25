@@ -61,18 +61,24 @@ describe('Tailwind / shadcn fixture suite', () => {
         expect(n.layout.height, `${name}: ${n.id} height >= 0`).toBeGreaterThanOrEqual(0)
       }
 
-      // Frame fills stay in 0-1 channel range
+      // Frame fills stay in 0-1 channel range (per stop for gradients).
       for (const n of allNodes) {
         if (n.type !== 'frame') continue
         for (const fill of n.fills) {
-          expect(fill.color.r).toBeGreaterThanOrEqual(0)
-          expect(fill.color.r).toBeLessThanOrEqual(1)
-          expect(fill.color.g).toBeGreaterThanOrEqual(0)
-          expect(fill.color.g).toBeLessThanOrEqual(1)
-          expect(fill.color.b).toBeGreaterThanOrEqual(0)
-          expect(fill.color.b).toBeLessThanOrEqual(1)
-          expect(fill.color.a).toBeGreaterThanOrEqual(0)
-          expect(fill.color.a).toBeLessThanOrEqual(1)
+          const colors =
+            fill.type === 'solid'
+              ? [fill.color]
+              : fill.gradient.stops.map((s) => s.color)
+          for (const c of colors) {
+            expect(c.r).toBeGreaterThanOrEqual(0)
+            expect(c.r).toBeLessThanOrEqual(1)
+            expect(c.g).toBeGreaterThanOrEqual(0)
+            expect(c.g).toBeLessThanOrEqual(1)
+            expect(c.b).toBeGreaterThanOrEqual(0)
+            expect(c.b).toBeLessThanOrEqual(1)
+            expect(c.a).toBeGreaterThanOrEqual(0)
+            expect(c.a).toBeLessThanOrEqual(1)
+          }
         }
       }
 

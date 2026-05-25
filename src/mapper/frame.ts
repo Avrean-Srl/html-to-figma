@@ -1,6 +1,7 @@
 import type { IRFrame } from '../types/ir'
 
 import { buildShadowEffects, mapBlendMode } from './effects'
+import { fillToPaint } from './paint'
 
 // Builds a FrameNode from an IRFrame. x/y placement is deferred to the
 // orchestrator because frames are positioned relative to their parent
@@ -15,11 +16,7 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
   frame.opacity = ir.opacity
 
   if (ir.fills.length > 0) {
-    frame.fills = ir.fills.map((f) => ({
-      type: 'SOLID' as const,
-      color: { r: f.color.r, g: f.color.g, b: f.color.b },
-      opacity: f.color.a
-    }))
+    frame.fills = ir.fills.map(fillToPaint)
   } else {
     frame.fills = []
   }

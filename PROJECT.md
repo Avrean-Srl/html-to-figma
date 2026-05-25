@@ -112,14 +112,14 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] Mapper skip x/y su children di Auto Layout frame (Figma gestisce positioning)
 - [x] Sizing modes `FIXED` per preservare dimensioni misurate
 
-### Fase 3 — Stile completo
-- [ ] Gradients (`linear-gradient`, `radial-gradient`) → `GradientPaint`
-- [ ] `border-radius` (incluse le 4 corner indipendenti)
-- [ ] `box-shadow` (anche multipli, anche inset) → `DropShadowEffect` / `InnerShadowEffect`
-- [ ] `border` uniform → stroke
-- [ ] `border` per-side → workaround (in Figma non esistono nativamente)
-- [ ] `opacity`, `mix-blend-mode`
-- [ ] `text-decoration`, `letter-spacing`, `line-height`, `text-align`
+### Fase 3 — Stile completo ✅ COMPLETATA (eccetto border per-side)
+- [x] Gradients (`linear-gradient`, `radial-gradient`) → `GradientPaint` (Phase 3.2). Linear con angolo CSS arbitrario (deg/turn/rad/grad e direzioni `to X`), radial centrato farthest-corner. Conic/diamond deferred.
+- [x] `border-radius` (incluse le 4 corner indipendenti) (Phase 1.3)
+- [x] `box-shadow` (anche multipli, anche inset) → `DropShadowEffect` / `InnerShadowEffect` (Phase 3.1)
+- [x] `border` uniform → stroke con `strokeAlign: 'INSIDE'` (Phase 3.1)
+- [ ] `border` per-side → workaround — **non implementato**, richiede frame sintetici come bordi simulati. Da fare quando arriverà un caso reale che lo richiede
+- [x] `opacity` (Phase 1.2), `mix-blend-mode` (Phase 3.1)
+- [x] `text-decoration`, `letter-spacing`, `line-height`, `text-align` (Phase 1.2/1.3)
 
 ### Fase 4 — Immagini e media
 - [ ] `<img>` con `src` data URL → `figma.createImage` + `ImagePaint`
@@ -308,5 +308,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 + 1 + 2 completate. 62/62 test verde. Plugin imports HTML con flex layout → Figma con Auto Layout (direction, gap, padding, align). Decisioni D1-D7 chiuse in DECISIONS.md. Pronti per Fase 3 (stile completo: gradients, shadows, borders).
+**Stato**: Fase 0 + 1 + 2 + 3 completate. 96/96 test verde. Plugin gestisce HTML con flex layout, gradients (linear+radial), box-shadow (multipli + inset), border uniformi, mix-blend-mode, e l'intero subset Phase 1+2 (frame/text/fills/font/auto-layout). Pronti per Fase 4 (immagini e media).
 **Ultima revisione**: 2026-05-25

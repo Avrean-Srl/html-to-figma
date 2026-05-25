@@ -9,12 +9,29 @@ import type {
 } from '../types/ir'
 
 import { parseColor } from './color'
+import { parseGradient } from './gradient'
 import { parseBoxShadow } from './shadow'
 
 export function extractFills(cs: CSSStyleDeclaration): IRFill[] {
+  const fills: IRFill[] = []
+
   const color = parseColor(cs.backgroundColor)
-  if (color.a === 0) return []
-  return [{ type: 'solid', color }]
+  if (color.a > 0) {
+    fills.push({ type: 'solid', color })
+  }
+
+  // Gradients live on top of background-color (CSS painting order).
+  // Figma fills are bottom-to-top in array order, so we push gradient
+  // after solid to layer correctly.
+  const bgImage = cs.backgroundImage
+  if (bgImage && bgImage !== 'none') {
+    const gradient = parseGradient(bgImage)
+    if (gradient !== null) {
+      fills.push({ type: 'gradient', gradient })
+    }
+  }
+
+  return fills
 }
 
 export function extractCornerRadius(cs: CSSStyleDeclaration): CornerRadius {
@@ -159,13 +176,14 @@ export function extractBlendMode(cs: CSSStyleDeclaration): IRBlendMode {
 }
 
 // True when an element carries visual styling that would be lost if we
-// flattened it into a plain IRText. Background, corner radius, and
-// padding all change the rendered box — they must survive as a frame
-// wrapping the text. Border + box-shadow check belongs here too but
-// they land in Phase 3.
+// flattened it into a plain IRText. Background (color or gradient),
+// corner radius, padding, border, and box-shadow all change the
+// rendered box — they must survive as a frame wrapping the text.
 export function hasFrameWorthyStyling(cs: CSSStyleDeclaration): boolean {
   const bg = parseColor(cs.backgroundColor)
   if (bg.a > 0) return true
+
+  if (cs.backgroundImage && cs.backgroundImage !== 'none') return true
 
   const tl = parseFloat(cs.borderTopLeftRadius) || 0
   const tr = parseFloat(cs.borderTopRightRadius) || 0
@@ -178,6 +196,12 @@ export function hasFrameWorthyStyling(cs: CSSStyleDeclaration): boolean {
   const pb = parseFloat(cs.paddingBottom) || 0
   const pl = parseFloat(cs.paddingLeft) || 0
   if (pt > 0 || pr > 0 || pb > 0 || pl > 0) return true
+
+  // Uniform border with non-zero width
+  const bw = parseFloat(cs.borderTopWidth) || 0
+  if (bw > 0 && cs.borderTopStyle !== 'none') return true
+
+  if (cs.boxShadow && cs.boxShadow !== 'none') return true
 
   return false
 }
