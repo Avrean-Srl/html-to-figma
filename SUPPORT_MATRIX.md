@@ -100,6 +100,14 @@ What is supported, partially supported, and not supported by the HTML to Figma p
 | Inline `<style>` blocks | ✅ | Applied to the rendered tree before walking. |
 | HTML comments | ✅ | Stripped by `innerHTML` parsing. |
 
+## Input formats
+
+| Input | Status | Notes |
+|---|---|---|
+| Paste HTML in the textarea | ✅ | The "Paste" tab. |
+| Drop a `.html` / `.htm` file | ✅ | The "File" tab. File contents read via `FileReader`. |
+| Drop a `.zip` archive | ✅ | The "File" tab. `index.html` (or first `.html`) is extracted; relative `<img src="...">` paths are inlined as data URLs from the archive's image assets. CSS `url(...)` references and `<link rel="stylesheet">` inside the archive are not yet resolved. |
+
 ## Performance limits
 
 | Feature | Status | Notes |

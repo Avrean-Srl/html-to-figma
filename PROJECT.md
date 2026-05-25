@@ -144,13 +144,14 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] Nesting profondo → niente safeguard ma il walker è ricorsivo standard, non stack-overflow su nesting realistico
 - [x] Documenti grandi → progress bar via `IMPORT_PROGRESS` ogni 25 nodi (Phase 6). Batching vero (await tick ogni N nodi) deferred
 
-### Fase 6 — UI e UX ✅ COMPLETATA (eccetto ZIP upload e tab Paste/File/ZIP)
-- [x] Drop zone per file `.html` / `.htm` (Phase 6, drag-drop sull'intero plugin window con outline visivo)
-- [ ] Drop zone per zip (HTML + assets) → **deferred v1.1**, richiede dipendenza JSZip
-- [ ] Tab "Paste" / "File" / "ZIP" → **skipped**, paste e drop sono entrambi visibili senza bisogno di tabs
+### Fase 6 — UI e UX ✅ COMPLETATA (estesa in Phase 8)
+- [x] Drop zone per file `.html` / `.htm` — Phase 6 drag-drop window + Phase 8 visible dashed zone con browse fallback
+- [x] Drop zone per zip (HTML + assets) — Phase 8, JSZip estrae index.html + inline asset relativi come data URL
+- [x] Tab "File" / "Paste" — Phase 8, default File. Tab "ZIP" non separato perché lo stesso drop zone accetta zip
 - [x] Settings: viewport width persistente via `figma.clientStorage`
 - [x] Progress bar durante import (`IMPORT_PROGRESS` events ogni 25 nodi)
 - [x] Error toast con messaggi chiari (formato `code: message` + lista URL falliti per immagini)
+- [x] Header brandizzato con SVG inline (Phase 8)
 - [ ] Link a docs per features non supportate → **deferred**, README/SUPPORT_MATRIX coprono al di fuori del plugin per ora
 
 ### Fase 7 — Polish per Community review ⚠️ PARZIALE (asset designer-only + submission TODO)
@@ -310,5 +311,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Tutte le 8 fasi (0-7) chiuse ai sub-task implementabili via codice. 121/121 test verde, 23 commit. Plugin pronto per submission Community modulo: cover image 1920×960 (designer-only), screenshot/GIF demo (designer-only), security disclosure form (submission-time). Vedi SUPPORT_MATRIX.md per coverage feature.
+**Stato**: 8 fasi (0-7) + UI restyle Phase 8 (banner + tabs + ZIP). 128/128 test verde, 24 commit. Plugin pronto per submission Community modulo: cover image 1920×960 (designer-only), screenshot/GIF demo (designer-only), security disclosure form (submission-time). Vedi SUPPORT_MATRIX.md per coverage feature.
 **Ultima revisione**: 2026-05-25
