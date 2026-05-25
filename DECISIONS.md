@@ -112,7 +112,35 @@ Quando un'immagine remota fallisce per CORS o errore di rete: creo un placeholde
 ### Decisione
 Il plugin id `1640730172709497684` nel `manifest.json` non si tocca, mai. È la chiave di registrazione presso Figma e cambiarlo significa pubblicare un plugin diverso (perdere review, installazioni, identità Community).
 
+Con `create-figma-plugin`, il `manifest.json` è generato dal campo `figma-plugin.id` in `package.json`. Quello è ora l'unica fonte di verità — il `manifest.json` è gitignorato perché rigenerato a ogni build.
+
 ### Conseguenze
-- Qualsiasi script di build (incluso create-figma-plugin) che rigenera `manifest.json` deve essere configurato per preservare l'id.
-- Test di Fase 0 finale: build da zero, verificare che `dist/manifest.json` contenga ancora `1640730172709497684`.
+- Qualsiasi script di build (incluso create-figma-plugin) che rigenera `manifest.json` deve essere configurato per preservare l'id via `package.json`.
+- Test di Fase 0 finale: build da zero, verificare che `manifest.json` generato contenga ancora `1640730172709497684`. **Eseguito 2026-05-25, OK.**
 - Se mai dovessimo riscrivere il plugin da zero, l'id resta — è l'identità pubblica del plugin.
+
+---
+
+## D6 — Niente cartella `src/bridge/*` per ora, emit/on diretti
+
+**Data**: 2026-05-25
+**Status**: Aperto, rivedibile in Fase 1
+
+### Decisione
+PROJECT.md §6 prevede `src/bridge/main.ts` e `src/bridge/ui.ts`. Per Fase 0 non li creiamo: usiamo direttamente `emit`/`on` da `@create-figma-plugin/utilities` con generics tipizzati tramite gli `EventHandler` definiti in `src/types/messages.ts`.
+
+### Perché
+- `emit<MyHandler>('EVENT', payload)` è già tipizzato. Un wrapper aggiungerebbe file senza aggiungere safety o ergonomia.
+- I file `bridge/*` avrebbero senso quando volessimo:
+  - Logica RPC request/response (correlare risposta a chiamata)
+  - Logging/instrumentazione centralizzata
+  - Mock del bridge per test del mapper
+
+Nessuno di questi serve in Fase 0. Premature abstraction.
+
+### Quando rivedere
+A Fase 1, quando arriverà il flusso `IMPORT_DOCUMENT` (UI→main) con risposta `IMPORT_COMPLETE`/`IMPORT_ERROR`. Se la correlazione richiesta/risposta diventa scomoda inline, estrarre in `src/bridge/`. Aggiornare questa decisione quando succede.
+
+### Conseguenze
+- `src/types/messages.ts` è l'unica fonte dei contratti UI↔main.
+- Aggiornare PROJECT.md §6 con nota "bridge/ TBD, non bloccante per Fase 0/1".
