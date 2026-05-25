@@ -90,7 +90,7 @@ export default async function (): Promise<void> {
     // Fall back to defaults.
   }
 
-  showUI({ width: 480, height: 680 })
+  showUI({ width: 480, height: 760 })
 
   // Wait a microtask so the UI's on() handler is registered before we emit.
   // create-figma-plugin's emit/on already buffers, so this is defensive.

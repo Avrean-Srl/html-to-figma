@@ -32,6 +32,7 @@
   "dependencies": {
     "@create-figma-plugin/ui": "^4.0.3",
     "@create-figma-plugin/utilities": "^4.0.3",
+    "jszip": "^3.10.1",
     "preact": "^10.27.2"
   },
   "pnpm": {

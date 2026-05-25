@@ -4,15 +4,18 @@ import {
   Dropdown,
   type DropdownOption,
   render,
+  Tabs,
+  type TabsOption,
   Text,
   TextboxMultiline,
   VerticalSpace
 } from '@create-figma-plugin/ui'
 import { emit, on } from '@create-figma-plugin/utilities'
-import { Fragment, h, type JSX } from 'preact'
+import { Fragment, h } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 import { parseHtmlToIR } from './parser'
+import { extractHtmlFromZip } from './parser/zip'
 import type { IRImageFailure } from './types/ir'
 import type {
   ImportCompleteHandler,
@@ -26,8 +29,11 @@ import type {
   SettingsChangedHandler,
   SettingsLoadedHandler
 } from './types/messages'
+import { Banner } from './ui/Banner'
+import { DropZone } from './ui/DropZone'
 
 type Status = 'idle' | 'parsing' | 'importing' | 'done' | 'error'
+type TabValue = 'file' | 'paste'
 
 const VIEWPORT_OPTIONS: Array<DropdownOption> = [
   { value: '320', text: '320 — mobile' },
@@ -38,21 +44,20 @@ const VIEWPORT_OPTIONS: Array<DropdownOption> = [
 ]
 
 function Plugin() {
+  const [tab, setTab] = useState<TabValue>('file')
   const [html, setHtml] = useState<string>('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [viewportWidth, setViewportWidth] = useState<string>('1440')
   const [status, setStatus] = useState<Status>('idle')
   const [statusDetail, setStatusDetail] = useState<string>('')
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [imageFailures, setImageFailures] = useState<IRImageFailure[]>([])
   const [bridgeOk, setBridgeOk] = useState<boolean>(false)
-  const [isDragging, setIsDragging] = useState<boolean>(false)
   const settingsHydrated = useRef<boolean>(false)
 
   useEffect(() => {
-    const unsubPong = on<PongHandler>('PONG', (data: PongPayload) => {
+    const unsubPong = on<PongHandler>('PONG', (_data: PongPayload) => {
       setBridgeOk(true)
-      // Mark bridge OK in dev — main already pongs once on PING.
-      void data
     })
     const unsubSettings = on<SettingsLoadedHandler>(
       'SETTINGS_LOADED',
@@ -61,17 +66,14 @@ function Plugin() {
         setViewportWidth(String(settings.viewportWidth))
       }
     )
-    const unsubProgress = on<ImportProgressHandler>(
-      'IMPORT_PROGRESS',
-      (p) => {
-        setProgress(p)
-      }
-    )
+    const unsubProgress = on<ImportProgressHandler>('IMPORT_PROGRESS', (p) => {
+      setProgress(p)
+    })
     const unsubDone = on<ImportCompleteHandler>('IMPORT_COMPLETE', (summary) => {
       setStatus('done')
       setProgress(null)
       setStatusDetail(
-        `Imported ${summary.nodesCreated} node(s) in ${summary.durationMs}ms.`
+        `Imported ${summary.nodesCreated} node(s) in ${summary.durationMs} ms.`
       )
       setImageFailures(summary.imageFailures)
     })
@@ -90,8 +92,6 @@ function Plugin() {
     }
   }, [])
 
-  // Persist viewport changes after the initial hydration from main, so we
-  // don't double-write the same value back on first load.
   useEffect(() => {
     if (!settingsHydrated.current) return
     emit<SettingsChangedHandler>('SETTINGS_CHANGED', {
@@ -99,17 +99,36 @@ function Plugin() {
     })
   }, [viewportWidth])
 
-  const canImport =
-    html.trim().length > 0 &&
-    (status === 'idle' || status === 'done' || status === 'error')
+  async function handleFileSelected(file: File): Promise<void> {
+    setSelectedFile(file)
+    setStatus('idle')
+    setStatusDetail('')
+  }
 
-  async function handleImport(): Promise<void> {
+  async function readSelectedFileToHtml(file: File): Promise<string> {
+    const lower = file.name.toLowerCase()
+    if (lower.endsWith('.zip')) {
+      return extractHtmlFromZip(file)
+    }
+    if (
+      lower.endsWith('.html') ||
+      lower.endsWith('.htm') ||
+      file.type === 'text/html'
+    ) {
+      return file.text()
+    }
+    throw new Error(
+      'Unsupported file type. Drop a .html, .htm, or .zip file.'
+    )
+  }
+
+  async function runImport(htmlString: string): Promise<void> {
     setStatus('parsing')
     setStatusDetail('')
     setImageFailures([])
     setProgress(null)
     try {
-      const ir = await parseHtmlToIR(html, {
+      const ir = await parseHtmlToIR(htmlString, {
         viewportWidth: Number(viewportWidth)
       })
       setStatus('importing')
@@ -120,43 +139,24 @@ function Plugin() {
     }
   }
 
-  function handleDragOver(e: JSX.TargetedDragEvent<HTMLDivElement>): void {
-    e.preventDefault()
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
-    setIsDragging(true)
-  }
-
-  function handleDragLeave(e: JSX.TargetedDragEvent<HTMLDivElement>): void {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  async function handleDrop(e: JSX.TargetedDragEvent<HTMLDivElement>): Promise<void> {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer?.files?.[0]
-    if (!file) return
-    const isHtml =
-      file.name.toLowerCase().endsWith('.html') ||
-      file.name.toLowerCase().endsWith('.htm') ||
-      file.type === 'text/html'
-    if (!isHtml) {
-      setStatus('error')
-      setStatusDetail('Only .html and .htm files can be dropped here.')
-      return
-    }
+  async function handleImportFromFile(): Promise<void> {
+    if (!selectedFile) return
     try {
-      const text = await file.text()
-      setHtml(text)
-      setStatus('idle')
-      setStatusDetail('')
+      const htmlString = await readSelectedFileToHtml(selectedFile)
+      await runImport(htmlString)
     } catch (err) {
       setStatus('error')
-      setStatusDetail(
-        `Could not read file: ${err instanceof Error ? err.message : String(err)}`
-      )
+      setStatusDetail(err instanceof Error ? err.message : String(err))
     }
   }
+
+  async function handleImportFromPaste(): Promise<void> {
+    await runImport(html)
+  }
+
+  const isBusy = status === 'parsing' || status === 'importing'
+  const canFileImport = selectedFile !== null && !isBusy
+  const canPasteImport = html.trim().length > 0 && !isBusy
 
   const buttonLabel =
     status === 'parsing'
@@ -165,28 +165,51 @@ function Plugin() {
         ? progressLabel(progress)
         : 'Import to Figma'
 
+  const fileTab = (
+    <Fragment>
+      <VerticalSpace space="medium" />
+      <DropZone
+        accept=".html,.htm,.zip,text/html,application/zip"
+        onFileSelected={handleFileSelected}
+        selectedFileName={selectedFile ? selectedFile.name : null}
+      />
+      <VerticalSpace space="small" />
+      <Text style={{ opacity: 0.65, fontSize: 11 }}>
+        Supports .html, .htm, and .zip archives containing one HTML file plus its image assets.
+      </Text>
+      <VerticalSpace space="medium" />
+      <Button fullWidth disabled={!canFileImport} onClick={handleImportFromFile}>
+        {buttonLabel}
+      </Button>
+    </Fragment>
+  )
+
+  const pasteTab = (
+    <Fragment>
+      <VerticalSpace space="medium" />
+      <TextboxMultiline
+        value={html}
+        onValueInput={setHtml}
+        rows={14}
+        placeholder="<div style='padding: 16px; background: #f0f0f0'>Hello</div>"
+      />
+      <VerticalSpace space="medium" />
+      <Button fullWidth disabled={!canPasteImport} onClick={handleImportFromPaste}>
+        {buttonLabel}
+      </Button>
+    </Fragment>
+  )
+
+  const tabOptions: Array<TabsOption> = [
+    { value: 'file', children: fileTab },
+    { value: 'paste', children: pasteTab }
+  ]
+
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      style={{
-        position: 'relative',
-        minHeight: '100vh',
-        outline: isDragging ? '2px dashed var(--figma-color-border-brand)' : 'none',
-        outlineOffset: '-4px'
-      }}
-    >
+    <Fragment>
+      <Banner />
       <Container space="medium">
-        <VerticalSpace space="large" />
-        <Text>
-          <strong>HTML to Figma</strong>
-        </Text>
-        <VerticalSpace space="extraSmall" />
-        <Text>
-          Paste HTML below, or drag a .html file onto the plugin window.
-        </Text>
-        <VerticalSpace space="large" />
+        <VerticalSpace space="medium" />
 
         <Text>
           <strong>Viewport width</strong>
@@ -197,30 +220,21 @@ function Plugin() {
           value={viewportWidth}
           onValueChange={setViewportWidth}
         />
-        <VerticalSpace space="large" />
+        <VerticalSpace space="medium" />
 
-        <Text>
-          <strong>HTML</strong>
-        </Text>
-        <VerticalSpace space="small" />
-        <TextboxMultiline
-          value={html}
-          onValueInput={setHtml}
-          rows={12}
-          placeholder="<div style='padding: 16px; background: #f0f0f0'>Hello</div>"
+        <Tabs
+          options={tabOptions}
+          value={tab}
+          onValueChange={(v) => setTab(v as TabValue)}
         />
-        <VerticalSpace space="large" />
 
-        <Button fullWidth disabled={!canImport} onClick={handleImport}>
-          {buttonLabel}
-        </Button>
         <VerticalSpace space="small" />
 
         <Text>
           {status === 'error' && `Error — ${statusDetail}`}
           {status === 'done' && statusDetail}
           {status === 'idle' && (bridgeOk ? 'Bridge OK.' : 'Connecting…')}
-          {(status === 'parsing' || status === 'importing') && progressLabel(progress)}
+          {isBusy && progressLabel(progress)}
         </Text>
 
         {imageFailures.length > 0 && (
@@ -240,7 +254,7 @@ function Plugin() {
 
         <VerticalSpace space="medium" />
       </Container>
-    </div>
+    </Fragment>
   )
 }
 
