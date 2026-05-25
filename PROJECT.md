@@ -85,11 +85,11 @@ Procedere **una fase alla volta**, non saltare avanti. Ogni fase deve essere fun
 
 ### Fase 0 — Setup (in corso)
 - [x] Scaffolding base via Figma desktop
-- [ ] Migrare a `create-figma-plugin` mantenendo lo stesso plugin `id` nel manifest
-- [ ] Setup bridge RPC tipizzato UI ↔ main
-- [ ] Hot reload funzionante
-- [ ] Vitest configurato
-- [ ] Tipi condivisi in `src/types/ir.ts`
+- [x] Migrare a `create-figma-plugin` mantenendo lo stesso plugin `id` nel manifest (v4.0.3, id in `package.json#figma-plugin.id`, manifest.json gitignorato perché generato — vedi DECISIONS.md D3, D5)
+- [x] Setup bridge UI ↔ main tipizzato (via `emit`/`on` di `@create-figma-plugin/utilities` + `EventHandler` in `src/types/messages.ts`. PING/PONG round-trip verificato in build. `src/bridge/*` deferred — vedi DECISIONS.md D6)
+- [ ] **Hot reload funzionante** ← test manuale in Figma desktop, vedi sezione 9
+- [x] Vitest configurato (browser mode con Playwright + Chromium headless, vedi DECISIONS.md D2)
+- [x] Tipi condivisi in `src/types/ir.ts` (`IRNode` discriminated union, `IRDocument` envelope, color in 0-1, `Uint8Array` per immagini, `loadStatus` per propagare CORS failures)
 
 ### Fase 1 — MVP "rettangoli e testo"
 Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo qualcosa di riconoscibile in Figma.
@@ -255,29 +255,44 @@ Cose che è utile sapere subito e che spesso confondono:
 ## 9. Dev workflow
 
 ```bash
-# Watch mode (ricompila a ogni save)
+# Watch mode (ricompila a ogni save, usa create-figma-plugin)
 npm run watch
 
-# Build di release
+# Build di release (typecheck + minify)
 npm run build
 
-# Test
+# Test (Vitest in browser mode, Playwright + Chromium headless)
 npm run test
+npm run test:watch
 
-# In Figma desktop: Cmd/Ctrl + Alt + P per ri-aprire ultimo plugin
-# Hot reload: Plugins → Development → Hot reload plugin (attivare)
-# Console main thread: Plugins → Development → Open Console
-# Console iframe UI: tasto destro sull'iframe → Inspect
+# In Figma desktop:
+# - Import plugin: Plugins → Development → Import plugin from manifest → seleziona manifest.json (generato dal build)
+# - Riapri ultimo plugin: Cmd/Ctrl + Alt + P
+# - Hot reload: Plugins → Development → Hot reload plugin (toggle attivo)
+# - Console main thread: Plugins → Development → Open Console
+# - Console iframe UI: tasto destro sull'iframe del plugin → Inspect
 ```
+
+### Verifica hot reload (Fase 0 unfinished checkbox)
+
+Per chiudere la spunta "Hot reload funzionante" in Fase 0:
+1. `npm run watch` (deve restare attivo)
+2. In Figma desktop: importa il plugin dal `manifest.json` generato in root
+3. Apri il plugin → UI mostra "Bridge OK — main responded v0.1.0 at HH:MM:SS"
+4. Modifica `src/ui.tsx` (es. cambia il testo), salva
+5. Senza ricaricare manualmente, riapri il plugin (Cmd/Ctrl+Alt+P) → la modifica appare
+
+Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel menu Development di Figma. Documentare comportamento osservato qui se diverge.
 
 ---
 
 ## 10. Cosa è ancora aperto / da decidere
 
-- **Nicchia di posizionamento** (Tailwind-aware? shadcn? email HTML? generico?) — decidere prima di Fase 2 perché impatta le euristiche di Auto Layout.
+- ~~Nicchia di posizionamento~~ → **DECISA**: Tailwind / utility-first. Vedi DECISIONS.md D1.
 - Se aggiungere supporto a zip upload (con assets) in Fase 4 o rimandare.
 - Se aggiungere analytics opt-in dopo v1.0.
-- Licenza del repo (probabilmente MIT, da confermare).
+- Licenza del repo → **MIT confermata** (in `package.json`).
+- Se estrarre `src/bridge/*` quando arriverà `IMPORT_DOCUMENT` in Fase 1. Vedi DECISIONS.md D6.
 
 ---
 
@@ -291,5 +306,5 @@ npm run test
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 in corso
+**Stato**: Fase 0 quasi completa (5/6 checkbox, manca solo verifica manuale hot reload in Figma desktop). Decisioni D1-D6 chiuse in DECISIONS.md.
 **Ultima revisione**: 2026-05-25
