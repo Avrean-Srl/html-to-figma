@@ -6,6 +6,7 @@ import type {
   IRNode,
   IRText
 } from '../types/ir'
+import { extractAutoLayout } from './auto-layout'
 import {
   extractCornerRadius,
   extractFills,
@@ -184,7 +185,7 @@ function buildFrame(
     fills: extractFills(cs),
     cornerRadius: extractCornerRadius(cs),
     children,
-    autoLayout: null
+    autoLayout: extractAutoLayout(cs)
   }
 }
 

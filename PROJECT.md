@@ -103,12 +103,14 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] Layout assoluto (no Auto Layout ancora) (Phase 1.3, parent-relative coords applicate nell'orchestrator)
 - [x] Test su 5 HTML campione (Phase 1.4, fixture Tailwind-style in `test/fixtures/`: card, navbar, hero, form, pricing-grid; 44/44 test totali)
 
-### Fase 2 — Auto Layout intelligente
-- [ ] Detect `display: flex` → Auto Layout (direction, gap, padding, primaryAxisAlign, counterAxisAlign)
-- [ ] Mapping `justify-content` / `align-items` → assi Auto Layout
-- [ ] Euristica per `display: block` con figli ben spaziati → Auto Layout verticale (opzionale, toggle)
-- [ ] `display: grid` → fallback a posizioni assolute (Figma non ha grid nativo)
-- [ ] `flex-wrap` → Auto Layout con wrap
+### Fase 2 — Auto Layout intelligente ✅ COMPLETATA (eccetto heuristic opzionale)
+- [x] Detect `display: flex` (e `inline-flex`) → Auto Layout (direction, gap, padding, primaryAxisAlign, counterAxisAlign) — vedi `src/parser/auto-layout.ts`
+- [x] Mapping `justify-content` (incluse space-around/evenly → approssimato a SPACE_BETWEEN) e `align-items` → assi Auto Layout
+- [ ] Euristica per `display: block` con figli ben spaziati → Auto Layout verticale — **skip per ora**, è un nice-to-have opzionale e richiede heuristic tuning su HTML reale. Da riaprire dopo aver visto dati di utilizzo
+- [x] `display: grid` → fallback a posizioni assolute (extractAutoLayout ritorna null per grid)
+- [x] `flex-wrap` → `layoutWrap: 'WRAP'`
+- [x] Mapper skip x/y su children di Auto Layout frame (Figma gestisce positioning)
+- [x] Sizing modes `FIXED` per preservare dimensioni misurate
 
 ### Fase 3 — Stile completo
 - [ ] Gradients (`linear-gradient`, `radial-gradient`) → `GradientPaint`
@@ -306,5 +308,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 + Fase 1 completate. 44/44 test verde. Plugin imports HTML → Figma frame+text con fills, padding, corner radius, font loading con fallback. Decisioni D1-D7 chiuse in DECISIONS.md. Pronti per Fase 2 (Auto Layout).
+**Stato**: Fase 0 + 1 + 2 completate. 62/62 test verde. Plugin imports HTML con flex layout → Figma con Auto Layout (direction, gap, padding, align). Decisioni D1-D7 chiuse in DECISIONS.md. Pronti per Fase 3 (stile completo: gradients, shadows, borders).
 **Ultima revisione**: 2026-05-25

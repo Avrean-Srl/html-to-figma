@@ -77,6 +77,7 @@ export interface IRAutoLayout {
   padding: { top: number; right: number; bottom: number; left: number }
   primaryAxisAlign: 'min' | 'center' | 'max' | 'space-between'
   counterAxisAlign: 'min' | 'center' | 'max'
+  wrap: boolean
 }
 
 export type ImageLoadStatus =
