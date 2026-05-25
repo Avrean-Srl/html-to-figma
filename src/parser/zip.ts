@@ -12,7 +12,7 @@ import JSZip from 'jszip'
 //
 // Limitations (acceptable for v1):
 //   - Only <img> srcs are rewritten. <link href> stylesheets, scripts,
-//     and CSS url() backgrounds are left alone — they wouldn't render
+//     and CSS url() backgrounds are left alone - they wouldn't render
 //     correctly anyway under the iframe sandbox.
 //   - No CSS @import resolution.
 export async function extractHtmlFromZip(file: File): Promise<string> {
@@ -27,7 +27,7 @@ export async function extractHtmlFromZip(file: File): Promise<string> {
   const htmlDir = directoryOf(htmlEntry.name)
   let html = await htmlEntry.async('string')
 
-  // Find every img src in source order. We don't dedupe — if the same
+  // Find every img src in source order. We don't dedupe - if the same
   // src appears twice the substitution still works (string split-join).
   const matches: Array<{ raw: string; src: string }> = []
   const regex = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi

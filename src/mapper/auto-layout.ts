@@ -3,7 +3,7 @@ import type { IRAutoLayout } from '../types/ir'
 // Applies an IR Auto Layout spec to a freshly-created Figma FrameNode.
 // Call this AFTER children are appended so Figma reflows with all
 // items present. Sizing modes are FIXED so the frame keeps the
-// dimensions we measured in the iframe — content overflows visibly
+// dimensions we measured in the iframe - content overflows visibly
 // rather than auto-shrinking, which preserves the user's expectation
 // of "what they pasted is what they get on the canvas".
 export function applyAutoLayout(

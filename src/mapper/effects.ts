@@ -21,7 +21,7 @@ export function buildShadowEffects(shadows: ReadonlyArray<IRShadow>): Effect[] {
 }
 
 // CSS mix-blend-mode -> Figma BlendMode. 'normal' is the only case we
-// skip — the caller decides not to touch the node's blendMode then.
+// skip - the caller decides not to touch the node's blendMode then.
 export function mapBlendMode(m: IRBlendMode): BlendMode {
   switch (m) {
     case 'multiply':

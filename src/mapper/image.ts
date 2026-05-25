@@ -7,7 +7,7 @@ import { mapBlendMode } from './effects'
 // fill/none/scale-down approximated to FILL (Figma has no direct stretch).
 //
 // When IRImage.bytes is null (CORS / network failure) the rectangle is
-// rendered as a placeholder grey box so layout is preserved — the UI
+// rendered as a placeholder grey box so layout is preserved - the UI
 // reports the failed URLs separately so the user can fix them manually.
 export function createImageFromIR(ir: IRImage): RectangleNode {
   const rect = figma.createRectangle()
@@ -33,14 +33,14 @@ export function createImageFromIR(ir: IRImage): RectangleNode {
       // formats via magic-number sniffing, but Figma occasionally
       // rejects bytes that pass the sniff (truncated PNGs, exotic JPEG
       // variants, etc.). Don't let a single bad image kill the whole
-      // import — render the placeholder instead.
+      // import - render the placeholder instead.
       rect.name = '[image format unsupported]'
       rect.fills = [
         { type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 }, opacity: 1 }
       ]
     }
   } else {
-    // Placeholder grey — keeps layout box visible.
+    // Placeholder grey - keeps layout box visible.
     rect.fills = [
       {
         type: 'SOLID',
@@ -68,7 +68,7 @@ function mapObjectFit(
       return 'FILL'
     // CSS 'none' and 'fill' don't map cleanly to Figma. 'none' would need
     // an identity transform via CROP; 'fill' would need stretch which
-    // Figma doesn't expose directly. Both fall through to FILL — the
+    // Figma doesn't expose directly. Both fall through to FILL - the
     // closest visual behavior that preserves the image inside the box.
     default:
       return 'FILL'

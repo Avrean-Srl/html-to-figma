@@ -1,11 +1,11 @@
 # In-plugin UI assets
 
-Sources for graphics shown inside the plugin's iframe. The current banner lives in `src/ui/Banner.tsx` as inline SVG — see two ways to swap it below.
+Sources for graphics shown inside the plugin's iframe. The current banner lives in `src/ui/Banner.tsx` as inline SVG - see two ways to swap it below.
 
-## Replacing the banner (vector path — recommended)
+## Replacing the banner (vector path - recommended)
 
 1. Design your banner in Figma (or any vector tool).
-2. **Constraints**: keep it ≤ 480 px wide (the plugin UI width). Recommended height 80–120 px. Use brand colors that read on both Figma's dark and light UI themes — or paint your own background within the banner.
+2. **Constraints**: keep it ≤ 480 px wide (the plugin UI width). Recommended height 80–120 px. Use brand colors that read on both Figma's dark and light UI themes - or paint your own background within the banner.
 3. Export as **SVG**.
 4. Open `src/ui/Banner.tsx`.
 5. Replace the entire `<svg>...</svg>` block with your exported SVG markup. Preserve the wrapping `<div>` if you want the existing gradient padding background, or drop it for an edge-to-edge banner.
@@ -17,7 +17,7 @@ If you want a PNG / JPG (e.g. with a photo or gradient that's hard to do in SVG)
 
 1. Export at **960 × 200 px** (retina-ready for the 480 px UI).
 2. Save as `assets/ui/banner.png`.
-3. Convert to base64 — any of:
+3. Convert to base64 - any of:
    - `base64 -w0 banner.png` on Linux/Mac
    - `[Convert]::ToBase64String([IO.File]::ReadAllBytes("banner.png"))` in PowerShell
    - An online encoder

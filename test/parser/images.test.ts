@@ -62,7 +62,7 @@ describe('loadImages format sniffing', () => {
   })
 
   it('accepts a valid PNG data URL', async () => {
-    // 1x1 transparent PNG — header is what we check, not the visual content.
+    // 1x1 transparent PNG - header is what we check, not the visual content.
     const pngDataUrl =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
     const img = imageNode(pngDataUrl, 'data-url')

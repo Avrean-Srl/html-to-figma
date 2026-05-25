@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 // browser. jsdom returns synthetic values that hide real bugs.
 // See DECISIONS.md D2.
 //
-// Mapper tests will eventually run in Node with a mocked figma global —
+// Mapper tests will eventually run in Node with a mocked figma global -
 // we'll split via projects/workspace when that arrives. For now everything
 // runs in the browser.
 

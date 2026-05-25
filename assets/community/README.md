@@ -1,6 +1,6 @@
 # Community submission assets
 
-Drop these files here before publishing to the Figma Community. None of them ship in `build/` — Figma reads them at publish time through its web form.
+Drop these files here before publishing to the Figma Community. None of them ship in `build/` - Figma reads them at publish time through its web form.
 
 ## Required
 
@@ -15,7 +15,7 @@ Drop these files here before publishing to the Figma Community. None of them shi
 
 - **Size**: 1920 × 960 px (2:1)
 - **Format**: PNG, no transparency
-- **Content**: communicates the value prop in one glance. Recommended composition: a stylized HTML snippet on the left, an arrow, the same content as Figma frames on the right. Brand colors. No tiny text — it'll be rendered as a thumbnail in many places.
+- **Content**: communicates the value prop in one glance. Recommended composition: a stylized HTML snippet on the left, an arrow, the same content as Figma frames on the right. Brand colors. No tiny text - it'll be rendered as a thumbnail in many places.
 
 ## Optional but recommended
 
@@ -49,4 +49,4 @@ demo.gif
 
 ## Verifying
 
-After dropping files here, just `git add` them — they're plain assets, no build step. The next `pnpm build` won't touch them. When you submit to Community, upload each one in the corresponding slot of the form.
+After dropping files here, just `git add` them - they're plain assets, no build step. The next `pnpm build` won't touch them. When you submit to Community, upload each one in the corresponding slot of the form.

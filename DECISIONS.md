@@ -4,7 +4,7 @@
 
 ---
 
-## D1 — Nicchia di posizionamento v1.0: Tailwind / utility-first
+## D1 - Nicchia di posizionamento v1.0: Tailwind / utility-first
 
 **Data**: 2026-05-25
 **Status**: Locked per v1.0
@@ -16,7 +16,7 @@ Il plugin è ottimizzato per HTML generato da framework utility-first: Tailwind 
 ### Perché
 - Mercato sotto-servito: html.to.design è generalista; nessuno è ottimizzato per il pattern Tailwind (molti `<div>` con classi atomiche, layout flexbox prevedibili, design tokens espliciti).
 - DOM tipico è ad alta entropia ma a bassa varianza strutturale → euristiche Auto Layout più affidabili.
-- Allineato al profilo utente reale (dev che usano cursor/v0/shadcn) — più probabile che installino plugin dalla Community se risolve il loro caso specifico.
+- Allineato al profilo utente reale (dev che usano cursor/v0/shadcn) - più probabile che installino plugin dalla Community se risolve il loro caso specifico.
 
 ### Alternative scartate
 - **Landing/marketing pages (Webflow/Framer export)**: già coperto bene da plugin esistenti; mercato saturo.
@@ -31,7 +31,7 @@ Il plugin è ottimizzato per HTML generato da framework utility-first: Tailwind 
 
 ---
 
-## D2 — Test infrastructure: Vitest browser mode (Playwright)
+## D2 - Test infrastructure: Vitest browser mode (Playwright)
 
 **Data**: 2026-05-25
 **Status**: Locked per Fase 0
@@ -41,7 +41,7 @@ Il plugin è ottimizzato per HTML generato da framework utility-first: Tailwind 
 Vitest in browser mode con provider Playwright (headless). Il parser DOM è testato end-to-end in un vero Chromium, non in jsdom. Il mapper resta testabile con Vitest standard (Node) usando mock minimale dell'API Figma.
 
 ### Perché
-Il parser dipende criticamente da `getComputedStyle`, layout calcolato, e font metrics. jsdom non calcola layout — tutti i test del parser sarebbero falsi positivi o forzati a mockare ciò che vogliamo testare.
+Il parser dipende criticamente da `getComputedStyle`, layout calcolato, e font metrics. jsdom non calcola layout - tutti i test del parser sarebbero falsi positivi o forzati a mockare ciò che vogliamo testare.
 
 ### Alternative scartate
 - **Solo jsdom + unit test funzioni pure**: copertura del parser di fatto zero. Bug di layout scoperti solo manualmente in Figma → ciclo di feedback lento.
@@ -56,7 +56,7 @@ Il parser dipende criticamente da `getComputedStyle`, layout calcolato, e font m
 
 ---
 
-## D3 — Migrazione a create-figma-plugin: subito in Fase 0
+## D3 - Migrazione a create-figma-plugin: subito in Fase 0
 
 **Data**: 2026-05-25
 **Status**: In esecuzione (Fase 0)
@@ -75,11 +75,11 @@ Migrare immediatamente dallo scaffold default Figma (`code.ts` + `ui.html`) a `c
 
 ### Alternative scartate
 - **Dopo MVP**: refactor del bridge e dei tipi messaggi al cambio → lavoro doppio.
-- **Resto su scaffold Figma**: niente hot reload affidabile, bundling manuale di Preact, più boilerplate. Senso solo se vogliamo controllo totale del build — non è il caso.
+- **Resto su scaffold Figma**: niente hot reload affidabile, bundling manuale di Preact, più boilerplate. Senso solo se vogliamo controllo totale del build - non è il caso.
 
 ---
 
-## D4 — Strategia immagini con CORS bloccato: UI esplicita con lista fallimenti
+## D4 - Strategia immagini con CORS bloccato: UI esplicita con lista fallimenti
 
 **Data**: 2026-05-25
 **Status**: Locked per Fase 4
@@ -104,7 +104,7 @@ Quando un'immagine remota fallisce per CORS o errore di rete: creo un placeholde
 
 ---
 
-## D5 — Plugin id preservation policy
+## D5 - Plugin id preservation policy
 
 **Data**: 2026-05-25
 **Status**: Locked permanently
@@ -112,16 +112,16 @@ Quando un'immagine remota fallisce per CORS o errore di rete: creo un placeholde
 ### Decisione
 Il plugin id `1640730172709497684` nel `manifest.json` non si tocca, mai. È la chiave di registrazione presso Figma e cambiarlo significa pubblicare un plugin diverso (perdere review, installazioni, identità Community).
 
-Con `create-figma-plugin`, il `manifest.json` è generato dal campo `figma-plugin.id` in `package.json`. Quello è ora l'unica fonte di verità — il `manifest.json` è gitignorato perché rigenerato a ogni build.
+Con `create-figma-plugin`, il `manifest.json` è generato dal campo `figma-plugin.id` in `package.json`. Quello è ora l'unica fonte di verità - il `manifest.json` è gitignorato perché rigenerato a ogni build.
 
 ### Conseguenze
 - Qualsiasi script di build (incluso create-figma-plugin) che rigenera `manifest.json` deve essere configurato per preservare l'id via `package.json`.
 - Test di Fase 0 finale: build da zero, verificare che `manifest.json` generato contenga ancora `1640730172709497684`. **Eseguito 2026-05-25, OK.**
-- Se mai dovessimo riscrivere il plugin da zero, l'id resta — è l'identità pubblica del plugin.
+- Se mai dovessimo riscrivere il plugin da zero, l'id resta - è l'identità pubblica del plugin.
 
 ---
 
-## D6 — Niente cartella `src/bridge/*` per ora, emit/on diretti
+## D6 - Niente cartella `src/bridge/*` per ora, emit/on diretti
 
 **Data**: 2026-05-25
 **Status**: Aperto, rivedibile in Fase 1
@@ -147,7 +147,7 @@ A Fase 1, quando arriverà il flusso `IMPORT_DOCUMENT` (UI→main) con risposta 
 
 ---
 
-## D7 — Render harness: offscreen container, non iframe srcdoc
+## D7 - Render harness: offscreen container, non iframe srcdoc
 
 **Data**: 2026-05-25
 **Status**: Locked per Fase 1.2, rivedibile in Fase 2

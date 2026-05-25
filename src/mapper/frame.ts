@@ -48,7 +48,7 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
       }
     ]
     frame.strokeWeight = ir.stroke.width
-    // INSIDE matches box-sizing: border-box visually — the border lives
+    // INSIDE matches box-sizing: border-box visually - the border lives
     // within the frame box rather than extending it.
     frame.strokeAlign = 'INSIDE'
   }

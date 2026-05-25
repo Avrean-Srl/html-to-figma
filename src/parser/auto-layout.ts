@@ -57,7 +57,7 @@ function mapJustifyContent(
     case 'space-around':
     case 'space-evenly':
       // Figma only models SPACE_BETWEEN. space-around/-evenly are
-      // approximated to it — closest available behavior.
+      // approximated to it - closest available behavior.
       return 'space-between'
     default:
       return 'min'

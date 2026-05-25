@@ -36,11 +36,11 @@ type Status = 'idle' | 'parsing' | 'importing' | 'done' | 'error'
 type TabValue = 'file' | 'paste'
 
 const VIEWPORT_OPTIONS: Array<DropdownOption> = [
-  { value: '320', text: '320 — mobile' },
-  { value: '768', text: '768 — tablet' },
-  { value: '1024', text: '1024 — laptop' },
-  { value: '1440', text: '1440 — desktop' },
-  { value: '1920', text: '1920 — wide' }
+  { value: '320', text: '320 px  ·  mobile' },
+  { value: '768', text: '768 px  ·  tablet' },
+  { value: '1024', text: '1024 px  ·  laptop' },
+  { value: '1440', text: '1440 px  ·  desktop' },
+  { value: '1920', text: '1920 px  ·  wide' }
 ]
 
 function Plugin() {
@@ -52,7 +52,7 @@ function Plugin() {
   const [statusDetail, setStatusDetail] = useState<string>('')
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [imageFailures, setImageFailures] = useState<IRImageFailure[]>([])
-  const [bridgeOk, setBridgeOk] = useState<boolean>(false)
+  const [, setBridgeOk] = useState<boolean>(false)
   const settingsHydrated = useRef<boolean>(false)
 
   useEffect(() => {
@@ -73,7 +73,7 @@ function Plugin() {
       setStatus('done')
       setProgress(null)
       setStatusDetail(
-        `Imported ${summary.nodesCreated} node(s) in ${summary.durationMs} ms.`
+        `Imported ${summary.nodesCreated} node${summary.nodesCreated === 1 ? '' : 's'} in ${summary.durationMs} ms`
       )
       setImageFailures(summary.imageFailures)
     })
@@ -103,6 +103,7 @@ function Plugin() {
     setSelectedFile(file)
     setStatus('idle')
     setStatusDetail('')
+    setImageFailures([])
   }
 
   async function readSelectedFileToHtml(file: File): Promise<string> {
@@ -174,9 +175,15 @@ function Plugin() {
         selectedFileName={selectedFile ? selectedFile.name : null}
       />
       <VerticalSpace space="small" />
-      <Text style={{ opacity: 0.65, fontSize: 11 }}>
-        Supports .html, .htm, and .zip archives containing one HTML file plus its image assets.
-      </Text>
+      <div
+        style={{
+          fontSize: 11,
+          opacity: 0.6,
+          lineHeight: '16px'
+        }}
+      >
+        Supports .html, .htm, and .zip archives with image assets.
+      </div>
       <VerticalSpace space="medium" />
       <Button fullWidth disabled={!canFileImport} onClick={handleImportFromFile}>
         {buttonLabel}
@@ -211,9 +218,7 @@ function Plugin() {
       <Container space="medium">
         <VerticalSpace space="medium" />
 
-        <Text>
-          <strong>Viewport width</strong>
-        </Text>
+        <SectionLabel>Viewport width</SectionLabel>
         <VerticalSpace space="small" />
         <Dropdown
           options={VIEWPORT_OPTIONS}
@@ -228,33 +233,178 @@ function Plugin() {
           onValueChange={(v) => setTab(v as TabValue)}
         />
 
-        <VerticalSpace space="small" />
-
-        <Text>
-          {status === 'error' && `Error — ${statusDetail}`}
-          {status === 'done' && statusDetail}
-          {status === 'idle' && (bridgeOk ? 'Bridge OK.' : 'Connecting…')}
-          {isBusy && progressLabel(progress)}
-        </Text>
+        <StatusLine status={status} detail={statusDetail} progress={progress} />
 
         {imageFailures.length > 0 && (
-          <Fragment>
-            <VerticalSpace space="medium" />
-            <Text>
-              <strong>{imageFailures.length} image(s) failed to load:</strong>
-            </Text>
-            <VerticalSpace space="extraSmall" />
-            {imageFailures.map((f) => (
-              <Text key={f.sourceUrl}>
-                {f.reason}: {f.sourceUrl}
-              </Text>
-            ))}
-          </Fragment>
+          <ImageFailuresList failures={imageFailures} />
         )}
 
         <VerticalSpace space="medium" />
+        <Footer />
       </Container>
     </Fragment>
+  )
+}
+
+function SectionLabel({ children }: { children: preact.ComponentChildren }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        opacity: 0.7
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function StatusLine({
+  status,
+  detail,
+  progress
+}: {
+  status: Status
+  detail: string
+  progress: ImportProgress | null
+}) {
+  if (status === 'idle') {
+    return <VerticalSpace space="small" />
+  }
+
+  const isError = status === 'error'
+  const isDone = status === 'done'
+  const isBusy = status === 'parsing' || status === 'importing'
+
+  const color = isError
+    ? 'var(--figma-color-text-danger)'
+    : isDone
+      ? 'var(--figma-color-text-success, #2bb673)'
+      : 'var(--figma-color-text-secondary)'
+
+  const icon = isError ? '⚠' : isDone ? '✓' : '⋯'
+
+  const message = isBusy ? progressLabel(progress) : detail
+
+  return (
+    <Fragment>
+      <VerticalSpace space="medium" />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8,
+          padding: '10px 12px',
+          borderRadius: 6,
+          background: 'var(--figma-color-bg-secondary)',
+          color,
+          fontSize: 11,
+          lineHeight: '15px'
+        }}
+      >
+        <span style={{ fontSize: 12, lineHeight: '15px' }}>{icon}</span>
+        <span style={{ flex: 1, wordBreak: 'break-word' }}>{message}</span>
+      </div>
+    </Fragment>
+  )
+}
+
+function ImageFailuresList({ failures }: { failures: IRImageFailure[] }) {
+  return (
+    <Fragment>
+      <VerticalSpace space="small" />
+      <div
+        style={{
+          border: '1px solid var(--figma-color-border)',
+          borderRadius: 6,
+          padding: '10px 12px',
+          background: 'var(--figma-color-bg)',
+          fontSize: 11,
+          lineHeight: '15px'
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 600,
+            marginBottom: 6,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          <span style={{ color: 'var(--figma-color-text-danger)' }}>
+            {failures.length}
+          </span>
+          <span>image{failures.length === 1 ? '' : 's'} failed to load</span>
+        </div>
+        <div
+          style={{
+            maxHeight: 110,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}
+        >
+          {failures.map((f) => (
+            <div
+              key={f.sourceUrl}
+              style={{ wordBreak: 'break-all', opacity: 0.85 }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  padding: '1px 6px',
+                  marginRight: 6,
+                  borderRadius: 3,
+                  background: 'var(--figma-color-bg-secondary)',
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}
+              >
+                {f.reason}
+              </span>
+              {f.sourceUrl}
+            </div>
+          ))}
+        </div>
+      </div>
+    </Fragment>
+  )
+}
+
+function Footer() {
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        paddingTop: 10,
+        borderTop: '1px solid var(--figma-color-border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: 10,
+        opacity: 0.55,
+        lineHeight: '14px'
+      }}
+    >
+      <span>v0.1.0  ·  by Avrean</span>
+      <a
+        href="https://github.com/Avrean-Srl/html-to-figma"
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          color: 'inherit',
+          textDecoration: 'none'
+        }}
+      >
+        github.com/Avrean-Srl/html-to-figma
+      </a>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 # Support matrix
 
-What is supported, partially supported, and not supported by the HTML to Figma plugin. Updated alongside the codebase — if a feature lands or is deferred, this document is updated in the same commit.
+What is supported, partially supported, and not supported by the HTML to Figma plugin. Updated alongside the codebase - if a feature lands or is deferred, this document is updated in the same commit.
 
 **Legend**
 - ✅ Supported and exercised by tests / fixtures
@@ -77,7 +77,7 @@ What is supported, partially supported, and not supported by the HTML to Figma p
 |---|---|---|
 | `<img>` with `data:` URL (PNG, JPEG, GIF) | ✅ | Decoded in process. SVG / WebP / AVIF data URLs are rejected as `format-unsupported` and a placeholder is rendered. |
 | `<img>` with absolute `https?:` URL | ✅ | Fetched in the plugin iframe. CORS, 404, network errors land in the post-import failure list with a placeholder in the canvas. |
-| `<img>` with relative URL | ⚠️ | Resolved against the plugin iframe origin, which is not the user's site — typically fails as `not-found`. |
+| `<img>` with relative URL | ⚠️ | Resolved against the plugin iframe origin, which is not the user's site - typically fails as `not-found`. |
 | `srcset`, `<picture>`, `<source>` | ❌ | Only `src` is read. |
 | `background-image: url(...)` raster | ❌ | Gradients work; URL backgrounds deferred. |
 | `<svg>` inline | ✅ | Routed through `figma.createNodeFromSvg`. Text inside SVG becomes vector paths, not editable text. |

@@ -13,7 +13,7 @@ export interface RenderHandle {
 //
 // Known trade-off: user CSS in <style> tags cascades to the plugin UI
 // while the container is mounted. `contain: layout style` blocks layout
-// containment but does not isolate CSS rules — that needs Shadow DOM or
+// containment but does not isolate CSS rules - that needs Shadow DOM or
 // a real iframe. Revisit in Phase 2 if real users report UI flicker.
 export async function renderHidden(
   html: string,

@@ -9,14 +9,14 @@ import { parseColor } from './color'
 // Phase 3.2 subset:
 //   linear-gradient([<angle> | to <direction>,] <stop>, <stop>, ...)
 //   radial-gradient([<shape/size/position>,] <stop>, <stop>, ...)
-// Radial shape/size/position is currently dropped — gradient stays
+// Radial shape/size/position is currently dropped - gradient stays
 // centered with a farthest-corner extent approximation.
 export function parseGradient(value: string): IRGradient | null {
   if (!value || value === 'none') return null
 
   const trimmed = value.trim()
 
-  // No /s flag — CSS computed values are single-line, and /s requires
+  // No /s flag - CSS computed values are single-line, and /s requires
   // ES2018 in the typechecker.
   const linear = trimmed.match(/^linear-gradient\((.+)\)$/)
   if (linear !== null) return parseLinear(linear[1])
@@ -85,7 +85,7 @@ function looksLikeAngle(s: string): boolean {
 function parseAngleToDegrees(s: string): number {
   const num = parseFloat(s)
   if (s.endsWith('turn')) return num * 360
-  // 'grad' must come before 'rad' — both endsWith('rad') matches.
+  // 'grad' must come before 'rad' - both endsWith('rad') matches.
   if (s.endsWith('grad')) return num * 0.9
   if (s.endsWith('rad')) return (num * 180) / Math.PI
   return num

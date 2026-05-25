@@ -2,8 +2,8 @@
 
 Static visual assets for the plugin. Two categories:
 
-1. **Community submission assets** (`community/`) — required by Figma when publishing
-2. **Plugin UI assets** (`ui/`) — used inside the plugin's iframe
+1. **Community submission assets** (`community/`) - required by Figma when publishing
+2. **Plugin UI assets** (`ui/`) - used inside the plugin's iframe
 
 ## Community submission (`assets/community/`)
 
@@ -22,12 +22,12 @@ These files are uploaded **at publish time**, not at plugin runtime. Figma deskt
 
 Sources for the banner shown inside the plugin's iframe. The current banner is implemented as inline SVG in `src/ui/Banner.tsx`. If you want to swap it out:
 
-**Option A — edit the SVG directly** (recommended, vector, tiny bundle):
+**Option A - edit the SVG directly** (recommended, vector, tiny bundle):
 1. Open `src/ui/Banner.tsx`
 2. Replace the `<svg>...</svg>` block with your own SVG markup
-3. Save — `pnpm watch` picks it up immediately
+3. Save - `pnpm watch` picks it up immediately
 
-**Option B — drop in a PNG**:
+**Option B - drop in a PNG**:
 1. Export your banner at 960×200 px (retina-ready for the 480 px UI width)
 2. Save as `assets/ui/banner.png`
 3. Convert to base64 (`base64 -w0 banner.png > banner.b64` on Linux/Mac, or any online tool)

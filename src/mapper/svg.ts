@@ -4,7 +4,7 @@ import { mapBlendMode } from './effects'
 
 // figma.createNodeFromSvg parses raw SVG markup and returns a FrameNode
 // containing vector children. It is synchronous. Text inside SVG becomes
-// vector paths — a known limitation (documented for users) since Phase 1
+// vector paths - a known limitation (documented for users) since Phase 1
 // text mapping doesn't apply here.
 export function createSvgFromIR(ir: IRSvg): FrameNode {
   const node = figma.createNodeFromSvg(ir.svg)

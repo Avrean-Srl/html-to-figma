@@ -1,6 +1,6 @@
 # HTML to Figma
 
-A free Figma plugin that converts HTML + CSS into native Figma nodes — frames, text, images, Auto Layout, fills, gradients, shadows, borders — preserving the rendered layout. Optimized for Tailwind / shadcn / utility-first markup.
+A free Figma plugin that converts HTML + CSS into native Figma nodes - frames, text, images, Auto Layout, fills, gradients, shadows, borders - preserving the rendered layout. Optimized for Tailwind / shadcn / utility-first markup.
 
 ```
 ┌─────────────────────────┐   ┌─────────────────────────┐
@@ -28,14 +28,14 @@ For local development, see [Development](#development) below.
 
 1. Open the plugin from Plugins → HTML to Figma.
 2. Either paste HTML into the textarea or drop a `.html` file onto the plugin window.
-3. Pick a viewport width (320 / 768 / 1024 / 1440 / 1920). This drives how the hidden render container sizes the layout — it does not constrain the final Figma frame.
+3. Pick a viewport width (320 / 768 / 1024 / 1440 / 1920). This drives how the hidden render container sizes the layout - it does not constrain the final Figma frame.
 4. Click **Import to Figma**.
 
 The imported tree appears at the center of your viewport and is selected, so you can immediately move it or paste it into a larger composition.
 
 ### What gets imported
 
-A short summary — the full matrix lives in [SUPPORT_MATRIX.md](SUPPORT_MATRIX.md).
+A short summary - the full matrix lives in [SUPPORT_MATRIX.md](SUPPORT_MATRIX.md).
 
 - `<div>`, `<section>`, `<article>`, etc. → `FrameNode`
 - `<h1>`–`<h6>`, `<p>`, `<span>`, `<a>`, text content → `TextNode` (with font matched against your Figma fonts; falls back to Inter)

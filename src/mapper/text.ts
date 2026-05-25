@@ -4,7 +4,7 @@ import { mapBlendMode } from './effects'
 
 // Builds a TextNode from an IRText. fontName must be assigned before
 // characters per Figma API contract, and the font must already be
-// loaded — the mapper orchestrator batch-loads via fonts.ts before
+// loaded - the mapper orchestrator batch-loads via fonts.ts before
 // calling this.
 export function createTextFromIR(ir: IRText, fontName: FontName): TextNode {
   const text = figma.createText()

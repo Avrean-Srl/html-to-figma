@@ -95,7 +95,7 @@ function decodeDataUrl(url: string): Uint8Array | null {
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
       return bytes
     }
-    // Plain (URL-encoded) data — encode as UTF-8 bytes.
+    // Plain (URL-encoded) data - encode as UTF-8 bytes.
     const decoded = decodeURIComponent(payload)
     return new TextEncoder().encode(decoded)
   } catch {

@@ -131,7 +131,7 @@ export function extractShadows(cs: CSSStyleDeclaration): IRShadow[] {
 }
 
 // Uniform border only in Phase 3.1. Per-side borders (e.g. border-bottom
-// only) are CSS-common but Figma has no per-side stroke — that's a
+// only) are CSS-common but Figma has no per-side stroke - that's a
 // separate workaround pass (synthetic thin frames as borders) deferred.
 // We detect uniform borders by requiring all four sides to match.
 export function extractStroke(cs: CSSStyleDeclaration): IRStroke | null {
@@ -195,7 +195,7 @@ export function extractBlendMode(cs: CSSStyleDeclaration): IRBlendMode {
 // True when an element carries visual styling that would be lost if we
 // flattened it into a plain IRText. Background (color or gradient),
 // corner radius, padding, border, and box-shadow all change the
-// rendered box — they must survive as a frame wrapping the text.
+// rendered box - they must survive as a frame wrapping the text.
 export function hasFrameWorthyStyling(cs: CSSStyleDeclaration): boolean {
   const bg = parseColor(cs.backgroundColor)
   if (bg.a > 0) return true

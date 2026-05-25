@@ -1,4 +1,4 @@
-# HTML to Figma — Plugin Figma
+# HTML to Figma - Plugin Figma
 
 > Documento di contesto principale per Claude Code. Leggere prima di qualsiasi modifica al codice.
 
@@ -6,7 +6,7 @@
 
 ## 1. Cosa stiamo costruendo
 
-Un **plugin Figma gratuito e client-side** che converte HTML+CSS in nodi Figma nativi (Frame, Text, Rectangle, ecc.) preservando layout, tipografia, colori, immagini e — dove possibile — mappando flexbox a Auto Layout.
+Un **plugin Figma gratuito e client-side** che converte HTML+CSS in nodi Figma nativi (Frame, Text, Rectangle, ecc.) preservando layout, tipografia, colori, immagini e - dove possibile - mappando flexbox a Auto Layout.
 
 **Obiettivo v1.0**: pubblicare sulla Figma Community un plugin che funzioni in modo affidabile su un sottoinsieme ben definito di input HTML, con limitazioni chiaramente documentate.
 
@@ -33,7 +33,7 @@ Il plugin Figma ha **due ambienti di esecuzione separati** che comunicano via `p
 ### Implicazione
 Tutto il parsing HTML, rendering nascosto e estrazione stili **deve** avvenire nell'iframe UI. Il main thread riceve solo una rappresentazione intermedia (IR) serializzabile in JSON e si occupa di materializzarla in nodi Figma.
 
-**Non tentare mai** di parsare HTML nel main thread o di chiamare API Figma dall'iframe — non funziona, non c'è workaround.
+**Non tentare mai** di parsare HTML nel main thread o di chiamare API Figma dall'iframe - non funziona, non c'è workaround.
 
 ---
 
@@ -60,7 +60,7 @@ Stadi 1-4 nell'iframe UI. Stadio 5 nel main thread.
 L'IR è il **contratto** tra parser (UI) e mapper (main). Mantenerlo:
 - Puro JSON serializzabile (no funzioni, no riferimenti DOM, no `Uint8Array` annidati senza encoding)
 - Tipizzato in TypeScript con tipi condivisi
-- Testabile in isolamento (il parser produce IR, il mapper consuma IR — entrambi unit-testabili)
+- Testabile in isolamento (il parser produce IR, il mapper consuma IR - entrambi unit-testabili)
 
 Le immagini nell'IR vanno passate come `Uint8Array` (Figma accetta), che `postMessage` clona via structured clone correttamente.
 
@@ -83,18 +83,18 @@ Niente librerie HTML parser esterne nel parser: usiamo `DOMParser` nativo dell'i
 
 Procedere **una fase alla volta**, non saltare avanti. Ogni fase deve essere funzionante e testata prima di passare alla successiva.
 
-### Fase 0 — Setup (in corso)
+### Fase 0 - Setup (in corso)
 - [x] Scaffolding base via Figma desktop
-- [x] Migrare a `create-figma-plugin` mantenendo lo stesso plugin `id` nel manifest (v4.0.3, id in `package.json#figma-plugin.id`, manifest.json gitignorato perché generato — vedi DECISIONS.md D3, D5)
-- [x] Setup bridge UI ↔ main tipizzato (via `emit`/`on` di `@create-figma-plugin/utilities` + `EventHandler` in `src/types/messages.ts`. PING/PONG round-trip verificato in build. `src/bridge/*` deferred — vedi DECISIONS.md D6)
+- [x] Migrare a `create-figma-plugin` mantenendo lo stesso plugin `id` nel manifest (v4.0.3, id in `package.json#figma-plugin.id`, manifest.json gitignorato perché generato - vedi DECISIONS.md D3, D5)
+- [x] Setup bridge UI ↔ main tipizzato (via `emit`/`on` di `@create-figma-plugin/utilities` + `EventHandler` in `src/types/messages.ts`. PING/PONG round-trip verificato in build. `src/bridge/*` deferred - vedi DECISIONS.md D6)
 - [x] Hot reload funzionante (verificato 2026-05-25: modifica a `src/ui.tsx` riapparsa dopo `Ctrl+Alt+P` con `pnpm watch` attivo, rebuild ~0.7s)
 - [x] Vitest configurato (browser mode con Playwright + Chromium headless, vedi DECISIONS.md D2)
 - [x] Tipi condivisi in `src/types/ir.ts` (`IRNode` discriminated union, `IRDocument` envelope, color in 0-1, `Uint8Array` per immagini, `loadStatus` per propagare CORS failures)
 
-### Fase 1 — MVP "rettangoli e testo" ✅ COMPLETATA
+### Fase 1 - MVP "rettangoli e testo" ✅ COMPLETATA
 Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo qualcosa di riconoscibile in Figma.
 - [x] UI: textarea per incollare HTML, bottone "Import" (Phase 1.1)
-- [x] Rendering nascosto dell'HTML in `<div>` invisibile dell'iframe (Phase 1.2, container offscreen — vedi DECISIONS.md D7)
+- [x] Rendering nascosto dell'HTML in `<div>` invisibile dell'iframe (Phase 1.2, container offscreen - vedi DECISIONS.md D7)
 - [x] Walker DOM ricorsivo (Phase 1.2, con regola `hasFrameWorthyStyling` per preservare frame su leaf con styling visivo)
 - [x] Estrazione subset minimo di computed styles (Phase 1.2, in `src/parser/styles.ts`)
 - [x] Costruzione IR (Phase 1.2, `IRDocument` con `IRNode` discriminated union)
@@ -103,25 +103,25 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] Layout assoluto (no Auto Layout ancora) (Phase 1.3, parent-relative coords applicate nell'orchestrator)
 - [x] Test su 5 HTML campione (Phase 1.4, fixture Tailwind-style in `test/fixtures/`: card, navbar, hero, form, pricing-grid; 44/44 test totali)
 
-### Fase 2 — Auto Layout intelligente ✅ COMPLETATA (eccetto heuristic opzionale)
-- [x] Detect `display: flex` (e `inline-flex`) → Auto Layout (direction, gap, padding, primaryAxisAlign, counterAxisAlign) — vedi `src/parser/auto-layout.ts`
+### Fase 2 - Auto Layout intelligente ✅ COMPLETATA (eccetto heuristic opzionale)
+- [x] Detect `display: flex` (e `inline-flex`) → Auto Layout (direction, gap, padding, primaryAxisAlign, counterAxisAlign) - vedi `src/parser/auto-layout.ts`
 - [x] Mapping `justify-content` (incluse space-around/evenly → approssimato a SPACE_BETWEEN) e `align-items` → assi Auto Layout
-- [ ] Euristica per `display: block` con figli ben spaziati → Auto Layout verticale — **skip per ora**, è un nice-to-have opzionale e richiede heuristic tuning su HTML reale. Da riaprire dopo aver visto dati di utilizzo
+- [ ] Euristica per `display: block` con figli ben spaziati → Auto Layout verticale - **skip per ora**, è un nice-to-have opzionale e richiede heuristic tuning su HTML reale. Da riaprire dopo aver visto dati di utilizzo
 - [x] `display: grid` → fallback a posizioni assolute (extractAutoLayout ritorna null per grid)
 - [x] `flex-wrap` → `layoutWrap: 'WRAP'`
 - [x] Mapper skip x/y su children di Auto Layout frame (Figma gestisce positioning)
 - [x] Sizing modes `FIXED` per preservare dimensioni misurate
 
-### Fase 3 — Stile completo ✅ COMPLETATA (eccetto border per-side)
+### Fase 3 - Stile completo ✅ COMPLETATA (eccetto border per-side)
 - [x] Gradients (`linear-gradient`, `radial-gradient`) → `GradientPaint` (Phase 3.2). Linear con angolo CSS arbitrario (deg/turn/rad/grad e direzioni `to X`), radial centrato farthest-corner. Conic/diamond deferred.
 - [x] `border-radius` (incluse le 4 corner indipendenti) (Phase 1.3)
 - [x] `box-shadow` (anche multipli, anche inset) → `DropShadowEffect` / `InnerShadowEffect` (Phase 3.1)
 - [x] `border` uniform → stroke con `strokeAlign: 'INSIDE'` (Phase 3.1)
-- [ ] `border` per-side → workaround — **non implementato**, richiede frame sintetici come bordi simulati. Da fare quando arriverà un caso reale che lo richiede
+- [ ] `border` per-side → workaround - **non implementato**, richiede frame sintetici come bordi simulati. Da fare quando arriverà un caso reale che lo richiede
 - [x] `opacity` (Phase 1.2), `mix-blend-mode` (Phase 3.1)
 - [x] `text-decoration`, `letter-spacing`, `line-height`, `text-align` (Phase 1.2/1.3)
 
-### Fase 4 — Immagini e media ✅ COMPLETATA (eccetto background-image url)
+### Fase 4 - Immagini e media ✅ COMPLETATA (eccetto background-image url)
 - [x] `<img>` con `src` data URL → decode in-process a `Uint8Array`, `figma.createImage` + `ImagePaint`
 - [x] `<img>` con URL assoluto → `fetch()` nell'iframe + CORS detection, fallback a placeholder grigio + report nel UI post-import
 - [ ] `background-image: url(...)` → **non implementato**, da fare per parità con `<img>` se utenti reali lo richiedono
@@ -130,7 +130,7 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] `networkAccess: ["*"]` con reasoning aggiornato (D4)
 - [x] UI mostra lista URL falliti con motivo (cors-blocked / network-error / not-found)
 
-### Fase 5 — Edge cases e robustezza ✅ COMPLETATA (eccetto transform + pseudo-elementi + batching)
+### Fase 5 - Edge cases e robustezza ✅ COMPLETATA (eccetto transform + pseudo-elementi + batching)
 - [x] HTML malformato → `innerHTML` lo gestisce, comments strippati, tag malformati riparati dal parser browser
 - [x] `<style>` inline → cascadano correttamente al rendered tree (già funzionante)
 - [x] `<link>` esterni → bloccati dal sandbox iframe, documentato in SUPPORT_MATRIX
@@ -144,24 +144,24 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] Nesting profondo → niente safeguard ma il walker è ricorsivo standard, non stack-overflow su nesting realistico
 - [x] Documenti grandi → progress bar via `IMPORT_PROGRESS` ogni 25 nodi (Phase 6). Batching vero (await tick ogni N nodi) deferred
 
-### Fase 6 — UI e UX ✅ COMPLETATA (estesa in Phase 8)
-- [x] Drop zone per file `.html` / `.htm` — Phase 6 drag-drop window + Phase 8 visible dashed zone con browse fallback
-- [x] Drop zone per zip (HTML + assets) — Phase 8, JSZip estrae index.html + inline asset relativi come data URL
-- [x] Tab "File" / "Paste" — Phase 8, default File. Tab "ZIP" non separato perché lo stesso drop zone accetta zip
+### Fase 6 - UI e UX ✅ COMPLETATA (estesa in Phase 8)
+- [x] Drop zone per file `.html` / `.htm` - Phase 6 drag-drop window + Phase 8 visible dashed zone con browse fallback
+- [x] Drop zone per zip (HTML + assets) - Phase 8, JSZip estrae index.html + inline asset relativi come data URL
+- [x] Tab "File" / "Paste" - Phase 8, default File. Tab "ZIP" non separato perché lo stesso drop zone accetta zip
 - [x] Settings: viewport width persistente via `figma.clientStorage`
 - [x] Progress bar durante import (`IMPORT_PROGRESS` events ogni 25 nodi)
 - [x] Error toast con messaggi chiari (formato `code: message` + lista URL falliti per immagini)
 - [x] Header brandizzato con SVG inline (Phase 8)
 - [ ] Link a docs per features non supportate → **deferred**, README/SUPPORT_MATRIX coprono al di fuori del plugin per ora
 
-### Fase 7 — Polish per Community review ⚠️ PARZIALE (asset designer-only + submission TODO)
+### Fase 7 - Polish per Community review ⚠️ PARZIALE (asset designer-only + submission TODO)
 - [ ] Cover image 1920×960 → **TODO designer**, non eseguibile via codice
 - [ ] Screenshot / GIF demo → **TODO designer**
 - [x] Descrizione plugin (in README.md)
 - [x] README pubblico con riferimento a `SUPPORT_MATRIX.md`
 - [x] Repo GitHub pubblico (`Avrean-Srl/html-to-figma`)
 - [ ] Security disclosure form compilato → **TODO al momento della submission Figma**
-- [x] Naming check ("HTML to Figma" — niente "Figma" come parola standalone vietata, posso usarlo nella descrizione)
+- [x] Naming check ("HTML to Figma" - niente "Figma" come parola standalone vietata, posso usarlo nella descrizione)
 - [⚠️] Testing batteria HTML → **10 fixture** (5 originali + 5 nuove Phase 7: button, badge, alert, mobile-navbar, footer). Sotto il target di 30 ma copre i pattern principali Tailwind/shadcn. Aggiungerne di più ad ogni bug-report come regression
 
 ---
@@ -219,18 +219,18 @@ HTML-to-Figma/
 1. **Aggiornare `SUPPORT_MATRIX.md`** quando aggiungi/rimuovi supporto a una feature CSS.
 2. **Aggiornare `DECISIONS.md`** quando prendi una decisione architetturale non ovvia (es. "perché non supportiamo grid", "perché fallback a Inter").
 3. **Scrivere unit test** per ogni funzione nel parser e nel mapper. L'IR è puro JSON, è banale testarlo.
-4. **Tipizzare strettamente l'IR** — niente `any`, niente union types vaghi.
+4. **Tipizzare strettamente l'IR** - niente `any`, niente union types vaghi.
 5. **Aggiungere fixture HTML** in `test/fixtures/` per ogni caso nuovo gestito (regression suite).
-6. **Documentare nel codice** ogni decisione "strana" — es. perché abbiamo gestito un edge case in un certo modo.
+6. **Documentare nel codice** ogni decisione "strana" - es. perché abbiamo gestito un edge case in un certo modo.
 
 ### Cosa non fare mai
 
 1. **Non chiamare API Figma dall'iframe UI** o DOM dal main thread. Sempre via bridge.
 2. **Non aggiungere dipendenze pesanti** alla UI iframe (resta sotto i 200KB di bundle iframe).
-3. **Non implementare features fuori dalla fase corrente** senza prima discutere — è facile esplodere di scope.
+3. **Non implementare features fuori dalla fase corrente** senza prima discutere - è facile esplodere di scope.
 4. **Non assumere che un computed style sia in unità "umane"**: `getComputedStyle` restituisce sempre valori risolti in px (per dimensioni) e rgb/rgba (per colori). Niente rem, niente named colors a runtime.
-5. **Non fare chiamate di rete dal main thread** — non può.
-6. **Non modificare il `manifest.json` `id`** — è il legame con la registrazione Figma.
+5. **Non fare chiamate di rete dal main thread** - non può.
+6. **Non modificare il `manifest.json` `id`** - è il legame con la registrazione Figma.
 
 ### Workflow per ogni task
 
@@ -283,7 +283,7 @@ pnpm test:watch
 Per chiudere la spunta "Hot reload funzionante" in Fase 0:
 1. `pnpm watch` (deve restare attivo)
 2. In Figma desktop: importa il plugin dal `manifest.json` generato in root
-3. Apri il plugin → UI mostra "Bridge OK — main responded v0.1.0 at HH:MM:SS"
+3. Apri il plugin → UI mostra "Bridge OK - main responded v0.1.0 at HH:MM:SS"
 4. Modifica `src/ui.tsx` (es. cambia il testo), salva
 5. Senza ricaricare manualmente, riapri il plugin (Cmd/Ctrl+Alt+P) → la modifica appare
 

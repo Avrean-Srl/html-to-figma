@@ -1,6 +1,6 @@
 // Intermediate Representation: pure JSON contract between parser (UI iframe)
 // and mapper (main thread). Safe for structured clone via postMessage.
-// Images use Uint8Array — structured clone preserves it.
+// Images use Uint8Array - structured clone preserves it.
 // See PROJECT.md sec 3 for pipeline context, DECISIONS.md D1 for niche scope.
 
 export type IRNode = IRFrame | IRText | IRImage | IRSvg
@@ -67,7 +67,7 @@ export interface IRShadow {
 }
 
 // Phase 3.1 supports uniform border only. Per-side borders (e.g.
-// border-bottom only) need a workaround — deferred.
+// border-bottom only) need a workaround - deferred.
 export interface IRStroke {
   color: IRColor
   width: number
