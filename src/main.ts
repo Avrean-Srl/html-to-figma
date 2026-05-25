@@ -1,8 +1,10 @@
 import { emit, on, showUI } from '@create-figma-plugin/utilities'
 
+import { materializeIR } from './mapper'
 import type {
   ImportCompleteHandler,
   ImportDocumentHandler,
+  ImportErrorHandler,
   PingHandler,
   PongHandler
 } from './types/messages'
@@ -17,23 +19,36 @@ export default function (): void {
     })
   })
 
-  on<ImportDocumentHandler>('IMPORT_DOCUMENT', (document) => {
-    // Phase 1.1 stub. Logs the payload and acks immediately. Real
-    // materialization (FrameNode/TextNode creation, font batch loading,
-    // image paint) arrives in Phase 1.3.
+  on<ImportDocumentHandler>('IMPORT_DOCUMENT', async (document) => {
     const start = Date.now()
-    console.log('[main] IMPORT_DOCUMENT received', {
-      viewportWidth: document.viewportWidth,
-      rootChildren: document.root.children.length,
-      fontsUsed: document.fontsUsed.length,
-      imageFailures: document.imageFailures.length
-    })
+    try {
+      const result = await materializeIR(document)
+      const page = figma.currentPage
+      page.appendChild(result.root)
 
-    emit<ImportCompleteHandler>('IMPORT_COMPLETE', {
-      nodesCreated: 0,
-      durationMs: Date.now() - start,
-      imageFailures: document.imageFailures
-    })
+      // Drop the root at the viewport center so it doesn't overlap with
+      // existing work at the page origin.
+      const center = figma.viewport.center
+      result.root.x = center.x - result.root.width / 2
+      result.root.y = center.y - result.root.height / 2
+
+      page.selection = [result.root]
+      figma.viewport.scrollAndZoomIntoView([result.root])
+
+      emit<ImportCompleteHandler>('IMPORT_COMPLETE', {
+        nodesCreated: result.nodesCreated,
+        durationMs: Date.now() - start,
+        imageFailures: document.imageFailures
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      const code: 'font-load-failed' | 'figma-api-error' = message
+        .toLowerCase()
+        .includes('font')
+        ? 'font-load-failed'
+        : 'figma-api-error'
+      emit<ImportErrorHandler>('IMPORT_ERROR', { code, message })
+    }
   })
 
   showUI({ width: 480, height: 640 })
