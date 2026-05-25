@@ -10,9 +10,29 @@ export function createTextFromIR(ir: IRText, fontName: FontName): TextNode {
   text.characters = ir.characters
   text.fontSize = Math.max(ir.fontSize, 1)
 
-  // Width keeps the text from collapsing to natural width when the
-  // source had wrapping. Figma autosizes height to fit by default.
-  text.resize(Math.max(ir.layout.width, 1), Math.max(ir.layout.height, 1))
+  // Width sizing: the iframe measured the text in its default font,
+  // Figma renders it in Inter (or whatever fontName resolved to).
+  // Font metric differences shift text width by a few percent, which
+  // causes single-line text to wrap unexpectedly. To avoid that we
+  // detect line count from layout height vs line-height and let Figma
+  // autosize single-line text. Multi-line text keeps a fixed width
+  // (with a small buffer) so the wrapping pattern stays roughly the
+  // same as in the source.
+  const effectiveLineHeight =
+    ir.lineHeight > 0 ? ir.lineHeight : ir.fontSize * 1.2
+  const visualLines = Math.max(
+    1,
+    Math.round(ir.layout.height / effectiveLineHeight)
+  )
+  if (visualLines === 1) {
+    text.textAutoResize = 'WIDTH_AND_HEIGHT'
+  } else {
+    text.textAutoResize = 'HEIGHT'
+    text.resize(
+      Math.max(ir.layout.width + 4, 1),
+      Math.max(ir.layout.height, 1)
+    )
+  }
 
   text.fills = [
     {
