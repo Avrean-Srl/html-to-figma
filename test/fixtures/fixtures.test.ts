@@ -4,9 +4,14 @@ import { describe, expect, it } from 'vitest'
 import { parseHtmlToIR } from '../../src/parser'
 import type { IRDocument, IRNode } from '../../src/types/ir'
 
+import alertHtml from './alert.html?raw'
+import badgeHtml from './badge.html?raw'
+import buttonHtml from './button.html?raw'
 import cardHtml from './card.html?raw'
+import footerHtml from './footer.html?raw'
 import formHtml from './form.html?raw'
 import heroHtml from './hero.html?raw'
+import mobileNavbarHtml from './mobile-navbar.html?raw'
 import navbarHtml from './navbar.html?raw'
 import pricingGridHtml from './pricing-grid.html?raw'
 
@@ -24,7 +29,12 @@ const FIXTURES: Fixture[] = [
   { name: 'navbar', html: navbarHtml, minNodes: 6 },
   { name: 'hero', html: heroHtml, minNodes: 4 },
   { name: 'form', html: formHtml, minNodes: 8 },
-  { name: 'pricing-grid', html: pricingGridHtml, minNodes: 13 }
+  { name: 'pricing-grid', html: pricingGridHtml, minNodes: 13 },
+  { name: 'button', html: buttonHtml, minNodes: 3 },
+  { name: 'badge', html: badgeHtml, minNodes: 4 },
+  { name: 'alert', html: alertHtml, minNodes: 3 },
+  { name: 'mobile-navbar', html: mobileNavbarHtml, minNodes: 6 },
+  { name: 'footer', html: footerHtml, minNodes: 12 }
 ]
 
 function flatten(nodes: ReadonlyArray<IRNode>): IRNode[] {
