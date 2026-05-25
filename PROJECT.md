@@ -256,14 +256,14 @@ Cose che è utile sapere subito e che spesso confondono:
 
 ```bash
 # Watch mode (ricompila a ogni save, usa create-figma-plugin)
-npm run watch
+pnpm watch
 
 # Build di release (typecheck + minify)
-npm run build
+pnpm build
 
 # Test (Vitest in browser mode, Playwright + Chromium headless)
-npm run test
-npm run test:watch
+pnpm test
+pnpm test:watch
 
 # In Figma desktop:
 # - Import plugin: Plugins → Development → Import plugin from manifest → seleziona manifest.json (generato dal build)
@@ -276,7 +276,7 @@ npm run test:watch
 ### Verifica hot reload (Fase 0 unfinished checkbox)
 
 Per chiudere la spunta "Hot reload funzionante" in Fase 0:
-1. `npm run watch` (deve restare attivo)
+1. `pnpm watch` (deve restare attivo)
 2. In Figma desktop: importa il plugin dal `manifest.json` generato in root
 3. Apri il plugin → UI mostra "Bridge OK — main responded v0.1.0 at HH:MM:SS"
 4. Modifica `src/ui.tsx` (es. cambia il testo), salva

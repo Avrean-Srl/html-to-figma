@@ -1,40 +1,52 @@
-Below are the steps to get your plugin running. You can also find instructions at:
+# HTML to Figma
 
-  https://www.figma.com/plugin-docs/plugin-quickstart-guide/
+Figma plugin that converts HTML+CSS into native Figma nodes (Frame, Text, Rectangle, Auto Layout), preserving layout, typography, colors, and images.
 
-This plugin template uses Typescript and NPM, two standard tools in creating JavaScript applications.
+**Status**: Phase 0 (setup). Not yet published to Figma Community.
+**Niche**: Tailwind / utility-first HTML. See [DECISIONS.md](DECISIONS.md) D1.
 
-First, download Node.js which comes with NPM. This will allow you to install TypeScript and other
-libraries. You can find the download link here:
+For full project context, architecture, and the phased roadmap, read [PROJECT.md](PROJECT.md). For locked-in decisions and their rationale, see [DECISIONS.md](DECISIONS.md).
 
-  https://nodejs.org/en/download/
+## Stack
 
-Next, install TypeScript using the command:
+- TypeScript (strict)
+- [create-figma-plugin](https://yuanqing.github.io/create-figma-plugin/) v4 with Preact UI
+- Vitest in browser mode (Playwright + Chromium) for parser tests that need real `getComputedStyle`
+- pnpm for dependency management
 
-  npm install -g typescript
+## Dev workflow
 
-Finally, in the directory of your plugin, get the latest type definitions for the plugin API by running:
+Prerequisites: Node 20.19+ or 22.13+, pnpm 10+, Figma desktop app.
 
-  npm install --save-dev @figma/plugin-typings
+```bash
+pnpm install            # one-time setup
+pnpm watch              # rebuild on save while you develop
+pnpm build              # production build (typecheck + minify)
+pnpm test               # run the test suite once
+pnpm test:watch         # vitest watch mode
+```
 
-If you are familiar with JavaScript, TypeScript will look very familiar. In fact, valid JavaScript code
-is already valid Typescript code.
+After `pnpm build` (or with `pnpm watch` running), the generated `manifest.json` lives at the repo root. In Figma desktop:
 
-TypeScript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
+1. Plugins → Development → **Import plugin from manifest** → select `manifest.json`
+2. Run it from the Plugins menu, or reopen with **Ctrl/Cmd+Alt+P**
+3. Toggle **Plugins → Development → Hot reload plugin** to pick up file saves automatically
 
-For more information, visit https://www.typescriptlang.org/
+## Repo layout
 
-Using TypeScript requires a compiler to convert TypeScript (code.ts) into JavaScript (code.js)
-for the browser to run.
+```
+src/
+  main.ts            # entry — runs in Figma sandbox, has figma.* API
+  ui.tsx             # entry — runs in iframe, has DOM + fetch
+  types/
+    ir.ts            # Intermediate Representation (parser → mapper contract)
+    messages.ts      # typed UI ↔ main events
+test/
+  parser/            # parser tests (run in real Chromium via Vitest browser mode)
+```
 
-We recommend writing TypeScript code using Visual Studio code:
+Plugin manifest fields (id, name, networkAccess, etc.) live in `package.json` → `figma-plugin`. The `manifest.json` file is regenerated on every build and is gitignored.
 
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
+## License
 
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+MIT.
