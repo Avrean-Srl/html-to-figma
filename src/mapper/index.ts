@@ -12,12 +12,43 @@ export interface MaterializeResult {
   nodesCreated: number
 }
 
+export interface MaterializeOptions {
+  onProgress?: (
+    stage: 'fonts' | 'nodes' | 'done',
+    current: number,
+    total: number
+  ) => void
+}
+
+function countIRNodes(node: import('../types/ir').IRNode): number {
+  if (node.type !== 'frame') return 1
+  let total = 1
+  for (const child of node.children) total += countIRNodes(child)
+  return total
+}
+
 export async function materializeIR(
-  doc: IRDocument
+  doc: IRDocument,
+  options: MaterializeOptions = {}
 ): Promise<MaterializeResult> {
+  const onProgress = options.onProgress
+
+  onProgress?.('fonts', 0, doc.fontsUsed.length || 1)
   const fontMap = await resolveAndLoadFonts(doc.fontsUsed)
+  onProgress?.('fonts', doc.fontsUsed.length || 1, doc.fontsUsed.length || 1)
+
+  const totalNodes = countIRNodes(doc.root)
+  onProgress?.('nodes', 0, totalNodes)
 
   let nodesCreated = 0
+  // Emit progress every N nodes to avoid spamming the event bus on
+  // large imports. Final tick is forced when the build completes.
+  const PROGRESS_CHUNK = 25
+  function tickProgress(): void {
+    if (nodesCreated % PROGRESS_CHUNK === 0) {
+      onProgress?.('nodes', nodesCreated, totalNodes)
+    }
+  }
 
   function buildNode(
     ir: IRNode,
@@ -52,6 +83,7 @@ export async function materializeIR(
       node.y = ir.layout.y - parentY
     }
     nodesCreated++
+    tickProgress()
     return node
   }
 
@@ -67,6 +99,7 @@ export async function materializeIR(
       node.y = ir.layout.y - parentY
     }
     nodesCreated++
+    tickProgress()
     return node
   }
 
@@ -83,6 +116,7 @@ export async function materializeIR(
       frame.y = ir.layout.y - parentY
     }
     nodesCreated++
+    tickProgress()
 
     const ownHasAutoLayout = ir.autoLayout !== null
     // CSS z-index: sort children ascending so higher z-index lands later
@@ -133,5 +167,6 @@ export async function materializeIR(
   }
 
   const root = buildFrame(doc.root, 0, 0, false)
+  onProgress?.('done', totalNodes, totalNodes)
   return { root, nodesCreated }
 }

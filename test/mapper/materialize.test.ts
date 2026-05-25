@@ -163,6 +163,27 @@ describe('materializeIR', () => {
     ])
   })
 
+  it('emits progress callbacks at the fonts and nodes stages', async () => {
+    const events: Array<[string, number, number]> = []
+    const doc = makeDoc(
+      frame({
+        children: [text({ id: 'a' }), text({ id: 'b' })]
+      })
+    )
+    await materializeIR(doc, {
+      onProgress: (stage, current, total) => events.push([stage, current, total])
+    })
+
+    const stages = events.map((e) => e[0])
+    expect(stages).toContain('fonts')
+    expect(stages).toContain('nodes')
+    expect(stages).toContain('done')
+    // The final event reports nodes equal to total.
+    const last = events[events.length - 1]
+    expect(last[0]).toBe('done')
+    expect(last[1]).toBe(last[2])
+  })
+
   it('loads only unique fonts before materializing', async () => {
     const doc: IRDocument = {
       viewportWidth: 1440,

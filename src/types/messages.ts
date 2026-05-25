@@ -63,3 +63,19 @@ export interface ImportError {
     | 'unknown'
   message: string
 }
+
+// main -> UI: persisted plugin settings loaded on plugin start.
+export interface SettingsLoadedHandler extends EventHandler {
+  name: 'SETTINGS_LOADED'
+  handler: (settings: PluginSettings) => void
+}
+
+// UI -> main: user changed a setting that should persist across sessions.
+export interface SettingsChangedHandler extends EventHandler {
+  name: 'SETTINGS_CHANGED'
+  handler: (settings: PluginSettings) => void
+}
+
+export interface PluginSettings {
+  viewportWidth: number
+}
