@@ -87,7 +87,7 @@ Procedere **una fase alla volta**, non saltare avanti. Ogni fase deve essere fun
 - [x] Scaffolding base via Figma desktop
 - [x] Migrare a `create-figma-plugin` mantenendo lo stesso plugin `id` nel manifest (v4.0.3, id in `package.json#figma-plugin.id`, manifest.json gitignorato perché generato — vedi DECISIONS.md D3, D5)
 - [x] Setup bridge UI ↔ main tipizzato (via `emit`/`on` di `@create-figma-plugin/utilities` + `EventHandler` in `src/types/messages.ts`. PING/PONG round-trip verificato in build. `src/bridge/*` deferred — vedi DECISIONS.md D6)
-- [ ] **Hot reload funzionante** ← test manuale in Figma desktop, vedi sezione 9
+- [x] Hot reload funzionante (verificato 2026-05-25: modifica a `src/ui.tsx` riapparsa dopo `Ctrl+Alt+P` con `pnpm watch` attivo, rebuild ~0.7s)
 - [x] Vitest configurato (browser mode con Playwright + Chromium headless, vedi DECISIONS.md D2)
 - [x] Tipi condivisi in `src/types/ir.ts` (`IRNode` discriminated union, `IRDocument` envelope, color in 0-1, `Uint8Array` per immagini, `loadStatus` per propagare CORS failures)
 
@@ -306,5 +306,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 quasi completa (5/6 checkbox, manca solo verifica manuale hot reload in Figma desktop). Decisioni D1-D6 chiuse in DECISIONS.md.
+**Stato**: Fase 0 completata (6/6 checkbox). Pronti per Fase 1. Decisioni D1-D6 chiuse in DECISIONS.md.
 **Ultima revisione**: 2026-05-25
