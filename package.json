@@ -1,17 +1,40 @@
 {
-  "name": "HTML-to-Figma",
-  "version": "1.0.0",
-  "description": "Your Figma Plugin",
-  "main": "code.js",
+  "name": "html-to-figma",
+  "version": "0.1.0",
+  "description": "Convert HTML+CSS to native Figma nodes.",
+  "private": true,
+  "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "build-figma-plugin --typecheck --minify",
+    "watch": "build-figma-plugin --typecheck --watch",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "watch": "npm run build -- --watch"
+    "lint:fix": "eslint . --fix"
   },
-  "author": "",
-  "license": "",
+  "figma-plugin": {
+    "id": "1640730172709497684",
+    "api": "1.0.0",
+    "name": "HTML to Figma",
+    "editorType": [
+      "figma"
+    ],
+    "documentAccess": "dynamic-page",
+    "main": "src/main.ts",
+    "ui": "src/ui.tsx",
+    "networkAccess": {
+      "allowedDomains": [
+        "none"
+      ],
+      "reasoning": "Phase 0-3 require no network access. Phase 4 (image import) will widen this to allow CORS fetching of external image URLs — change deferred until then. See DECISIONS.md D4."
+    }
+  },
+  "dependencies": {
+    "@create-figma-plugin/ui": "^4.0.3",
+    "@create-figma-plugin/utilities": "^4.0.3",
+    "preact": "^10.27.2"
+  },
   "devDependencies": {
+    "@create-figma-plugin/build": "^4.0.3",
+    "@create-figma-plugin/tsconfig": "^4.0.3",
     "@eslint/js": "^9.39.4",
     "@figma/eslint-plugin-figma-plugins": "*",
     "@figma/plugin-typings": "*",

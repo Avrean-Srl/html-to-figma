@@ -1,8 +1,16 @@
 # Node
 *.log
 *.log.*
-node_modules
+node_modules/
 
+# Build output (create-figma-plugin)
+build/
 out/
 dist/
+
+# Legacy scaffold output (kept until cleanup)
 code.js
+
+# Generated on build from package.json#figma-plugin
+# Source of truth for the plugin id is package.json
+manifest.json
