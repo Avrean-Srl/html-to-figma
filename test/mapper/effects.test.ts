@@ -110,6 +110,57 @@ describe('mapper effects, stroke, blendMode', () => {
     expect(eff.type).toBe('INNER_SHADOW')
   })
 
+  // Figma's runtime rejects INNER_SHADOW effects that carry showShadowBehindNode:
+  // "unrecognized keys in object showShadowBehindNode at index N". The key is only
+  // defined on DropShadowEffect. The orchestrator assigns the entire effects array
+  // in one call, so a single bad entry aborts the whole frame's effects assignment
+  // - which in turn aborts applyAutoLayout further up the call stack.
+  it('omits showShadowBehindNode on INNER_SHADOW (figma runtime would reject it)', async () => {
+    const shadow: IRShadow = {
+      type: 'inner',
+      offsetX: 0,
+      offsetY: 1,
+      blur: 2,
+      spread: 0,
+      color: { r: 0, g: 0, b: 0, a: 0.5 }
+    }
+    const doc = makeDoc(frame({ shadows: [shadow] }))
+    const result = await materializeIR(doc)
+
+    const eff = (result.root.effects as Effect[])[0]
+    expect(eff).not.toHaveProperty('showShadowBehindNode')
+  })
+
+  it('keeps showShadowBehindNode on DROP_SHADOW (valid key) and omits on INNER_SHADOW in mixed list', async () => {
+    const shadows: IRShadow[] = [
+      {
+        type: 'drop',
+        offsetX: 0,
+        offsetY: 6,
+        blur: 12,
+        spread: 0,
+        color: { r: 0, g: 0, b: 0, a: 0.35 }
+      },
+      {
+        type: 'inner',
+        offsetX: 0,
+        offsetY: 1,
+        blur: 0,
+        spread: 0,
+        color: { r: 1, g: 1, b: 1, a: 0.25 }
+      }
+    ]
+    const doc = makeDoc(frame({ shadows }))
+    const result = await materializeIR(doc)
+    const effs = result.root.effects as Effect[]
+
+    expect(effs).toHaveLength(2)
+    expect(effs[0].type).toBe('DROP_SHADOW')
+    expect(effs[0]).toHaveProperty('showShadowBehindNode')
+    expect(effs[1].type).toBe('INNER_SHADOW')
+    expect(effs[1]).not.toHaveProperty('showShadowBehindNode')
+  })
+
   it('applies multiple shadows in order', async () => {
     const shadows: IRShadow[] = [
       {

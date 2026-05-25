@@ -2,22 +2,43 @@ import type { IRBlendMode, IRShadow } from '../types/ir'
 
 // IR shadows -> Figma Effect[]. Single point of conversion so frame
 // and text can share the recipe.
+//
+// Branch on type because the Figma runtime validates effect keys against
+// the variant: DropShadowEffect accepts showShadowBehindNode, but
+// InnerShadowEffect rejects it ("unrecognized keys in object
+// showShadowBehindNode"). A single bad entry fails the whole .effects
+// assignment, which aborts the surrounding frame build.
 export function buildShadowEffects(shadows: ReadonlyArray<IRShadow>): Effect[] {
-  return shadows.map((s) => ({
-    type: s.type === 'inner' ? 'INNER_SHADOW' : 'DROP_SHADOW',
-    color: {
+  return shadows.map((s) => {
+    const color = {
       r: s.color.r,
       g: s.color.g,
       b: s.color.b,
       a: s.color.a
-    },
-    offset: { x: s.offsetX, y: s.offsetY },
-    radius: s.blur,
-    spread: s.spread,
-    visible: true,
-    blendMode: 'NORMAL',
-    showShadowBehindNode: false
-  }))
+    }
+    const offset = { x: s.offsetX, y: s.offsetY }
+    if (s.type === 'inner') {
+      return {
+        type: 'INNER_SHADOW',
+        color,
+        offset,
+        radius: s.blur,
+        spread: s.spread,
+        visible: true,
+        blendMode: 'NORMAL'
+      } satisfies InnerShadowEffect
+    }
+    return {
+      type: 'DROP_SHADOW',
+      color,
+      offset,
+      radius: s.blur,
+      spread: s.spread,
+      visible: true,
+      blendMode: 'NORMAL',
+      showShadowBehindNode: false
+    } satisfies DropShadowEffect
+  })
 }
 
 // CSS mix-blend-mode -> Figma BlendMode. 'normal' is the only case we
