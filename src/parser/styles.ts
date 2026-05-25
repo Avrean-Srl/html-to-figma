@@ -86,3 +86,27 @@ export function extractOpacity(cs: CSSStyleDeclaration): number {
 export function isHidden(cs: CSSStyleDeclaration): boolean {
   return cs.display === 'none' || cs.visibility === 'hidden'
 }
+
+// True when an element carries visual styling that would be lost if we
+// flattened it into a plain IRText. Background, corner radius, and
+// padding all change the rendered box — they must survive as a frame
+// wrapping the text. Border + box-shadow check belongs here too but
+// they land in Phase 3.
+export function hasFrameWorthyStyling(cs: CSSStyleDeclaration): boolean {
+  const bg = parseColor(cs.backgroundColor)
+  if (bg.a > 0) return true
+
+  const tl = parseFloat(cs.borderTopLeftRadius) || 0
+  const tr = parseFloat(cs.borderTopRightRadius) || 0
+  const br = parseFloat(cs.borderBottomRightRadius) || 0
+  const bl = parseFloat(cs.borderBottomLeftRadius) || 0
+  if (tl > 0 || tr > 0 || br > 0 || bl > 0) return true
+
+  const pt = parseFloat(cs.paddingTop) || 0
+  const pr = parseFloat(cs.paddingRight) || 0
+  const pb = parseFloat(cs.paddingBottom) || 0
+  const pl = parseFloat(cs.paddingLeft) || 0
+  if (pt > 0 || pr > 0 || pb > 0 || pl > 0) return true
+
+  return false
+}

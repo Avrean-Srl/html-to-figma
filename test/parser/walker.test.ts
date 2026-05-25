@@ -105,6 +105,34 @@ describe('walkDocument', () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
+  it('wraps a styled text-leaf in IRFrame containing IRText (background, padding, radius)', () => {
+    const container = setup(
+      '<div style="background: rgb(0, 128, 255); padding: 20px; border-radius: 8px">Boxed</div>'
+    )
+    const result = walkDocument(container, 1440)
+
+    expect(result.root.children).toHaveLength(1)
+    const wrapper = result.root.children[0]
+    expect(wrapper.type).toBe('frame')
+    if (wrapper.type === 'frame') {
+      expect(wrapper.fills).toHaveLength(1)
+      expect(wrapper.cornerRadius).toEqual([8, 8, 8, 8])
+      expect(wrapper.children).toHaveLength(1)
+      expect(wrapper.children[0].type).toBe('text')
+      if (wrapper.children[0].type === 'text') {
+        expect(wrapper.children[0].characters).toBe('Boxed')
+      }
+    }
+  })
+
+  it('keeps a plain text-leaf as IRText (no frame wrapping)', () => {
+    const container = setup('<div>plain</div>')
+    const result = walkDocument(container, 1440)
+
+    expect(result.root.children).toHaveLength(1)
+    expect(result.root.children[0].type).toBe('text')
+  })
+
   it('captures loose text inside mixed-content elements via Range', () => {
     const container = setup('<p>Hello <strong>world</strong></p>')
     const result = walkDocument(container, 1440)

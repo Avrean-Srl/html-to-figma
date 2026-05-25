@@ -16,6 +16,7 @@ import {
   extractTextAlign,
   extractTextColor,
   extractTextDecoration,
+  hasFrameWorthyStyling,
   isHidden
 } from './styles'
 
@@ -123,6 +124,15 @@ function walkElement(
   if (!hasElementChildren) {
     const text = (el.textContent ?? '').trim()
     if (text.length > 0) {
+      // A leaf with text inherits a frame whenever the element carries
+      // visual styling (background, radius, padding). Otherwise we'd
+      // lose the rendered box. The text child is positioned by Range
+      // so it lands inside the padding correctly.
+      if (hasFrameWorthyStyling(cs)) {
+        const textLayout = rangedLayout(el, containerRect) ?? layout
+        const textChild = buildText(cs, textLayout, text, idGen, fontRefs)
+        return buildFrame(cs, layout, [textChild], idGen, tag)
+      }
       return buildText(cs, layout, text, idGen, fontRefs)
     }
     return buildFrame(cs, layout, [], idGen, tag)
@@ -252,6 +262,24 @@ function buildLooseText(
     lineHeight: extractLineHeight(parentCs, fontSize),
     textAlign: extractTextAlign(parentCs),
     textDecoration: extractTextDecoration(parentCs)
+  }
+}
+
+function rangedLayout(el: Element, containerRect: DOMRect): IRLayout | null {
+  const range = el.ownerDocument?.createRange()
+  if (!range) return null
+  try {
+    range.selectNodeContents(el)
+  } catch {
+    return null
+  }
+  const rect = range.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return null
+  return {
+    x: rect.left - containerRect.left,
+    y: rect.top - containerRect.top,
+    width: rect.width,
+    height: rect.height
   }
 }
 
