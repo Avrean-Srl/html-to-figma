@@ -28,6 +28,18 @@ export interface MockNode {
   strokes?: unknown[]
   strokeWeight?: number
   strokeAlign?: 'INSIDE' | 'OUTSIDE' | 'CENTER'
+  // Auto Layout
+  layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL'
+  primaryAxisSizingMode?: 'FIXED' | 'AUTO'
+  counterAxisSizingMode?: 'FIXED' | 'AUTO'
+  primaryAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN'
+  counterAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX'
+  itemSpacing?: number
+  paddingTop?: number
+  paddingRight?: number
+  paddingBottom?: number
+  paddingLeft?: number
+  layoutWrap?: 'WRAP' | 'NO_WRAP'
   // Text-only
   characters?: string
   fontName?: { family: string; style: string }
@@ -46,10 +58,52 @@ export interface MockFigmaState {
   viewportCenter: { x: number; y: number }
 }
 
+// Approximate Figma's hug-snap behavior: when layoutMode flips from NONE
+// to HORIZONTAL/VERTICAL and the matching sizing mode is still AUTO (the
+// default), the frame shrinks to the content extent along that axis.
+// Real Figma is more nuanced (it accounts for padding, gap, child layout
+// sizing, etc.) but this is enough to catch a mapper that flips layoutMode
+// before pinning sizing modes to FIXED.
+function hugSnap(node: MockNode): void {
+  if (node.layoutMode === 'NONE' || node.layoutMode === undefined) return
+  const horizontal = node.layoutMode === 'HORIZONTAL'
+  const padLeft = node.paddingLeft ?? 0
+  const padRight = node.paddingRight ?? 0
+  const padTop = node.paddingTop ?? 0
+  const padBottom = node.paddingBottom ?? 0
+  const gap = node.itemSpacing ?? 0
+  const n = node.children.length
+  const gaps = n > 1 ? (n - 1) * gap : 0
+
+  if (horizontal) {
+    const sumW = node.children.reduce((a, c) => a + c.width, 0)
+    const maxH = node.children.reduce((a, c) => Math.max(a, c.height), 0)
+    if (node.primaryAxisSizingMode === 'AUTO' || node.primaryAxisSizingMode === undefined) {
+      node.width = sumW + gaps + padLeft + padRight
+    }
+    if (node.counterAxisSizingMode === 'AUTO' || node.counterAxisSizingMode === undefined) {
+      node.height = maxH + padTop + padBottom
+    }
+  } else {
+    const sumH = node.children.reduce((a, c) => a + c.height, 0)
+    const maxW = node.children.reduce((a, c) => Math.max(a, c.width), 0)
+    if (node.primaryAxisSizingMode === 'AUTO' || node.primaryAxisSizingMode === undefined) {
+      node.height = sumH + gaps + padTop + padBottom
+    }
+    if (node.counterAxisSizingMode === 'AUTO' || node.counterAxisSizingMode === undefined) {
+      node.width = maxW + padLeft + padRight
+    }
+  }
+}
+
 function makeNode(
   type: 'FRAME' | 'TEXT' | 'RECTANGLE',
   state: MockFigmaState
 ): MockNode {
+  // Storage for layoutMode so we can intercept assignment and simulate
+  // Figma's hug-snap.
+  let layoutMode: 'NONE' | 'HORIZONTAL' | 'VERTICAL' = 'NONE'
+
   const node: MockNode = {
     type,
     name: '',
@@ -75,6 +129,24 @@ function makeNode(
       this.children.push(child)
     }
   }
+
+  Object.defineProperty(node, 'layoutMode', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      return layoutMode
+    },
+    set(v: 'NONE' | 'HORIZONTAL' | 'VERTICAL') {
+      const wasNone = layoutMode === 'NONE'
+      layoutMode = v
+      // Snap only on the NONE -> HORIZONTAL/VERTICAL transition. Mirrors
+      // Figma: switching off doesn't snap; switching on does.
+      if (wasNone && v !== 'NONE') {
+        hugSnap(node)
+      }
+    }
+  })
+
   state.createdNodes.push(node)
   return node
 }

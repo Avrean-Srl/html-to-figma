@@ -132,6 +132,66 @@ describe('materializeIR with Auto Layout', () => {
     expect(result.root.height).toBe(200)
   })
 
+  // Regression for saas-landing.html report: a horizontal flex container
+  // (e.g. a `<nav>` with `justify-content: space-between`) was getting
+  // hug-snapped to the sum of its children when layoutMode flipped before
+  // sizing modes were pinned to FIXED. The fix is to pin sizing first and
+  // call resize() defensively at the end of applyAutoLayout.
+  it('preserves frame width when children hug-content is much smaller (was: nav shrank to 393)', async () => {
+    const doc = makeDoc(
+      frame({
+        layout: { x: 0, y: 0, width: 1088, height: 74 },
+        autoLayout: autoLayout({
+          direction: 'horizontal',
+          primaryAxisAlign: 'space-between',
+          counterAxisAlign: 'center',
+          padding: { top: 20, right: 0, bottom: 20, left: 0 }
+        }),
+        children: [
+          frame({
+            id: 'logo-group',
+            layout: { x: 0, y: 0, width: 104, height: 28 }
+          }),
+          frame({
+            id: 'links-group',
+            layout: { x: 0, y: 0, width: 289, height: 34 }
+          })
+        ]
+      })
+    )
+    const result = await materializeIR(doc)
+    // Pre-fix the mock would report 104 + 289 + 0 = 393.
+    expect(result.root.width).toBe(1088)
+    expect(result.root.height).toBe(74)
+    expect(result.root.layoutMode).toBe('HORIZONTAL')
+    expect(result.root.primaryAxisAlignItems).toBe('SPACE_BETWEEN')
+  })
+
+  it('preserves frame width on a vertical-direction container too (parity check)', async () => {
+    const doc = makeDoc(
+      frame({
+        layout: { x: 0, y: 0, width: 1152, height: 600 },
+        autoLayout: autoLayout({
+          direction: 'vertical',
+          gap: 24
+        }),
+        children: [
+          frame({
+            id: 'r1',
+            layout: { x: 0, y: 0, width: 200, height: 100 }
+          }),
+          frame({
+            id: 'r2',
+            layout: { x: 0, y: 0, width: 300, height: 100 }
+          })
+        ]
+      })
+    )
+    const result = await materializeIR(doc)
+    expect(result.root.width).toBe(1152)
+    expect(result.root.height).toBe(600)
+  })
+
   it('enables layoutWrap when wrap is true', async () => {
     const doc = makeDoc(
       frame({ autoLayout: autoLayout({ wrap: true }) })
