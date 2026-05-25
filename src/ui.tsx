@@ -9,10 +9,11 @@ import {
   VerticalSpace
 } from '@create-figma-plugin/ui'
 import { emit, on } from '@create-figma-plugin/utilities'
-import { h } from 'preact'
+import { Fragment, h } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 
 import { parseHtmlToIR } from './parser'
+import type { IRImageFailure } from './types/ir'
 import type {
   ImportCompleteHandler,
   ImportDocumentHandler,
@@ -36,6 +37,7 @@ function Plugin() {
   const [viewportWidth, setViewportWidth] = useState<string>('1440')
   const [status, setStatus] = useState<Status>('idle')
   const [statusDetail, setStatusDetail] = useState<string>('')
+  const [imageFailures, setImageFailures] = useState<IRImageFailure[]>([])
   const [bridgeOk, setBridgeOk] = useState<boolean>(false)
 
   useEffect(() => {
@@ -47,6 +49,7 @@ function Plugin() {
       setStatusDetail(
         `Imported ${summary.nodesCreated} node(s) in ${summary.durationMs}ms.`
       )
+      setImageFailures(summary.imageFailures)
     })
     const unsubErr = on<ImportErrorHandler>('IMPORT_ERROR', (err) => {
       setStatus('error')
@@ -67,6 +70,7 @@ function Plugin() {
   async function handleImport() {
     setStatus('parsing')
     setStatusDetail('')
+    setImageFailures([])
     try {
       const ir = await parseHtmlToIR(html, {
         viewportWidth: Number(viewportWidth)
@@ -131,6 +135,22 @@ function Plugin() {
         {status === 'done' && statusDetail}
         {status === 'idle' && (bridgeOk ? 'Bridge OK.' : 'Connecting...')}
       </Text>
+
+      {imageFailures.length > 0 && (
+        <Fragment>
+          <VerticalSpace space="medium" />
+          <Text>
+            <strong>{imageFailures.length} image(s) failed to load:</strong>
+          </Text>
+          <VerticalSpace space="extraSmall" />
+          {imageFailures.map((f) => (
+            <Text key={f.sourceUrl}>
+              {f.reason}: {f.sourceUrl}
+            </Text>
+          ))}
+        </Fragment>
+      )}
+
       <VerticalSpace space="medium" />
     </Container>
   )

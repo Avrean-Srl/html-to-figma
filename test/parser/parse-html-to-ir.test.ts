@@ -33,6 +33,24 @@ describe('parseHtmlToIR', () => {
     )
     expect(ir.fontsUsed.length).toBeGreaterThan(0)
   })
+
+  it('decodes data URL images to bytes during loadImages pass', async () => {
+    const tinyPng =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    const ir = await parseHtmlToIR(
+      `<img src="${tinyPng}" width="10" height="10" />`,
+      { viewportWidth: 1440 }
+    )
+    const flat = flatten(ir.root.children)
+    const img = flat.find((n) => n.type === 'image')
+    expect(img).toBeDefined()
+    if (img?.type === 'image') {
+      expect(img.loadStatus).toBe('data-url')
+      expect(img.bytes).not.toBeNull()
+      expect(img.bytes!.length).toBeGreaterThan(0)
+    }
+    expect(ir.imageFailures).toEqual([])
+  })
 })
 
 function flatten(nodes: ReadonlyArray<import('../../src/types/ir').IRNode>): import('../../src/types/ir').IRNode[] {

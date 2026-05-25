@@ -24,9 +24,9 @@
     "ui": "src/ui.tsx",
     "networkAccess": {
       "allowedDomains": [
-        "none"
+        "*"
       ],
-      "reasoning": "Phase 0-3 require no network access. Phase 4 (image import) will widen this to allow CORS fetching of external image URLs — change deferred until then. See DECISIONS.md D4."
+      "reasoning": "Phase 4: the plugin fetches user-pasted image URLs from arbitrary domains so they can be imported as Figma image fills. Without wildcard the plugin would only work for data: URLs. CORS failures are surfaced to the user in the post-import report. See DECISIONS.md D4."
     }
   },
   "dependencies": {

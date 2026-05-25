@@ -143,6 +143,7 @@ export interface IRAutoLayout {
 }
 
 export type ImageLoadStatus =
+  | 'pending'
   | 'ok'
   | 'data-url'
   | 'cors-blocked'

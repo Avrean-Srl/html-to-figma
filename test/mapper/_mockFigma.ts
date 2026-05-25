@@ -4,7 +4,7 @@
 // resulting node tree directly.
 
 export interface MockNode {
-  type: 'FRAME' | 'TEXT'
+  type: 'FRAME' | 'TEXT' | 'RECTANGLE'
   name: string
   x: number
   y: number
@@ -46,7 +46,10 @@ export interface MockFigmaState {
   viewportCenter: { x: number; y: number }
 }
 
-function makeNode(type: 'FRAME' | 'TEXT', state: MockFigmaState): MockNode {
+function makeNode(
+  type: 'FRAME' | 'TEXT' | 'RECTANGLE',
+  state: MockFigmaState
+): MockNode {
   const node: MockNode = {
     type,
     name: '',
@@ -95,9 +98,13 @@ export function installMockFigma(
     viewportCenter: options.viewportCenter ?? { x: 0, y: 0 }
   }
 
+  let nextImageHash = 0
   const figmaMock = {
     createFrame: () => makeNode('FRAME', state),
     createText: () => makeNode('TEXT', state),
+    createRectangle: () => makeNode('RECTANGLE', state),
+    createImage: (_bytes: Uint8Array) => ({ hash: `img-${nextImageHash++}` }),
+    createNodeFromSvg: (_svg: string) => makeNode('FRAME', state),
     loadFontAsync: async (fontName: { family: string; style: string }) => {
       state.loadedFonts.push(fontName)
     },

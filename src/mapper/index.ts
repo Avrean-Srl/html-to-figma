@@ -1,8 +1,10 @@
-import type { IRDocument, IRFrame, IRNode, IRText } from '../types/ir'
+import type { IRDocument, IRFrame, IRImage, IRNode, IRSvg, IRText } from '../types/ir'
 
 import { applyAutoLayout } from './auto-layout'
 import { createFrameFromIR } from './frame'
 import { resolveAndLoadFonts, resolveFont } from './fonts'
+import { createImageFromIR } from './image'
+import { createSvgFromIR } from './svg'
 import { createTextFromIR } from './text'
 
 export interface MaterializeResult {
@@ -29,7 +31,43 @@ export async function materializeIR(
     if (ir.type === 'text') {
       return buildText(ir, parentX, parentY, parentHasAutoLayout)
     }
+    if (ir.type === 'image') {
+      return buildImage(ir, parentX, parentY, parentHasAutoLayout)
+    }
+    if (ir.type === 'svg') {
+      return buildSvg(ir, parentX, parentY, parentHasAutoLayout)
+    }
     return null
+  }
+
+  function buildImage(
+    ir: IRImage,
+    parentX: number,
+    parentY: number,
+    parentHasAutoLayout: boolean
+  ): RectangleNode {
+    const node = createImageFromIR(ir)
+    if (!parentHasAutoLayout) {
+      node.x = ir.layout.x - parentX
+      node.y = ir.layout.y - parentY
+    }
+    nodesCreated++
+    return node
+  }
+
+  function buildSvg(
+    ir: IRSvg,
+    parentX: number,
+    parentY: number,
+    parentHasAutoLayout: boolean
+  ): FrameNode {
+    const node = createSvgFromIR(ir)
+    if (!parentHasAutoLayout) {
+      node.x = ir.layout.x - parentX
+      node.y = ir.layout.y - parentY
+    }
+    nodesCreated++
+    return node
   }
 
   function buildFrame(

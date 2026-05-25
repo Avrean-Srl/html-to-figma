@@ -121,12 +121,14 @@ Obiettivo: incollo un HTML semplice (div con testo, colori, padding) e ottengo q
 - [x] `opacity` (Phase 1.2), `mix-blend-mode` (Phase 3.1)
 - [x] `text-decoration`, `letter-spacing`, `line-height`, `text-align` (Phase 1.2/1.3)
 
-### Fase 4 — Immagini e media
-- [ ] `<img>` con `src` data URL → `figma.createImage` + `ImagePaint`
-- [ ] `<img>` con URL assoluto → fetch nell'iframe + check CORS, documentare limitazione
-- [ ] `background-image: url(...)` → idem
-- [ ] `object-fit: cover/contain` → `imageTransform` o scaleMode
-- [ ] SVG inline → `figma.createNodeFromSvg()`
+### Fase 4 — Immagini e media ✅ COMPLETATA (eccetto background-image url)
+- [x] `<img>` con `src` data URL → decode in-process a `Uint8Array`, `figma.createImage` + `ImagePaint`
+- [x] `<img>` con URL assoluto → `fetch()` nell'iframe + CORS detection, fallback a placeholder grigio + report nel UI post-import
+- [ ] `background-image: url(...)` → **non implementato**, da fare per parità con `<img>` se utenti reali lo richiedono
+- [x] `object-fit: cover/contain` → `scaleMode` (cover→FILL, contain→FIT, scale-down→FIT, none/fill→FILL approx)
+- [x] SVG inline → `figma.createNodeFromSvg()` (testo SVG vettorializzato, limitazione nota documentata)
+- [x] `networkAccess: ["*"]` con reasoning aggiornato (D4)
+- [x] UI mostra lista URL falliti con motivo (cors-blocked / network-error / not-found)
 
 ### Fase 5 — Edge cases e robustezza
 - [ ] HTML malformato → DOMParser gestisce, verificare
@@ -308,5 +310,5 @@ Se step 5 richiede un reload manuale, attivare il toggle "Hot reload plugin" nel
 ---
 
 **Owner**: Edoardo / Redergo
-**Stato**: Fase 0 + 1 + 2 + 3 completate. 96/96 test verde. Plugin gestisce HTML con flex layout, gradients (linear+radial), box-shadow (multipli + inset), border uniformi, mix-blend-mode, e l'intero subset Phase 1+2 (frame/text/fills/font/auto-layout). Pronti per Fase 4 (immagini e media).
+**Stato**: Fase 0-4 completate. 100/100 test verde. Plugin gestisce HTML completo: frame/text/fills/font/auto-layout/gradients/shadows/borders/blend-modes/immagini (data URL + remote fetch con CORS report)/SVG inline. Pronti per Fase 5 (edge cases) o Fase 6 (UI/UX polish).
 **Ultima revisione**: 2026-05-25

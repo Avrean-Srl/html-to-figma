@@ -1,10 +1,13 @@
 import type {
   IRFontRef,
   IRFrame,
+  IRImage,
   IRImageFailure,
   IRLayout,
   IRNode,
-  IRText
+  IRSvg,
+  IRText,
+  ImageLoadStatus
 } from '../types/ir'
 import { extractAutoLayout } from './auto-layout'
 import {
@@ -24,10 +27,9 @@ import {
   isHidden
 } from './styles'
 
-// Tags skipped entirely in Phase 1.2. Media (img/svg/video/...) is
-// Phase 4; form controls land later. Non-visible head tags never carry
-// renderable boxes so they would be filtered anyway, but skipping by
-// tag is cheaper than computing styles to discover that.
+// Tags skipped entirely. img and svg are handled specially below.
+// Form controls and remaining media (video/audio/canvas/iframe/...) are
+// still deferred.
 const SKIP_TAGS = new Set([
   'script',
   'style',
@@ -37,8 +39,6 @@ const SKIP_TAGS = new Set([
   'title',
   'noscript',
   'template',
-  'img',
-  'svg',
   'video',
   'audio',
   'canvas',
@@ -109,6 +109,10 @@ function walkElement(
   fontRefs: IRFontRef[]
 ): IRNode | null {
   const tag = el.tagName.toLowerCase()
+
+  if (tag === 'img') return buildImage(el as HTMLImageElement, containerRect, idGen)
+  if (tag === 'svg') return buildSvg(el as SVGSVGElement, containerRect, idGen)
+
   if (SKIP_TAGS.has(tag)) return null
 
   const cs = getComputedStyle(el)
@@ -274,6 +278,89 @@ function buildLooseText(
     lineHeight: extractLineHeight(parentCs, fontSize),
     textAlign: extractTextAlign(parentCs),
     textDecoration: extractTextDecoration(parentCs)
+  }
+}
+
+function buildImage(
+  el: HTMLImageElement,
+  containerRect: DOMRect,
+  idGen: () => string
+): IRImage | null {
+  if (!el.src) return null
+
+  const cs = getComputedStyle(el)
+  if (isHidden(cs)) return null
+
+  const rect = el.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return null
+
+  const layout: IRLayout = {
+    x: rect.left - containerRect.left,
+    y: rect.top - containerRect.top,
+    width: rect.width,
+    height: rect.height
+  }
+
+  const isDataUrl = el.src.startsWith('data:')
+  const status: ImageLoadStatus = isDataUrl ? 'data-url' : 'pending'
+
+  return {
+    type: 'image',
+    id: idGen(),
+    layout,
+    opacity: extractOpacity(cs),
+    hidden: false,
+    blendMode: extractBlendMode(cs),
+    sourceUrl: el.src,
+    bytes: null,
+    loadStatus: status,
+    objectFit: mapObjectFit(cs.objectFit)
+  }
+}
+
+function buildSvg(
+  el: SVGSVGElement,
+  containerRect: DOMRect,
+  idGen: () => string
+): IRSvg | null {
+  const cs = getComputedStyle(el)
+  if (isHidden(cs)) return null
+
+  const rect = el.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return null
+
+  const layout: IRLayout = {
+    x: rect.left - containerRect.left,
+    y: rect.top - containerRect.top,
+    width: rect.width,
+    height: rect.height
+  }
+
+  return {
+    type: 'svg',
+    id: idGen(),
+    layout,
+    opacity: extractOpacity(cs),
+    hidden: false,
+    blendMode: extractBlendMode(cs),
+    svg: el.outerHTML
+  }
+}
+
+function mapObjectFit(
+  v: string
+): 'fill' | 'contain' | 'cover' | 'none' | 'scale-down' {
+  switch (v) {
+    case 'contain':
+      return 'contain'
+    case 'cover':
+      return 'cover'
+    case 'none':
+      return 'none'
+    case 'scale-down':
+      return 'scale-down'
+    default:
+      return 'fill'
   }
 }
 

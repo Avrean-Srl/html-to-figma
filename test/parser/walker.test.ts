@@ -65,15 +65,58 @@ describe('walkDocument', () => {
     expect(result.root.children).toHaveLength(1)
   })
 
-  it('skips img, svg, and script tags entirely', () => {
+  it('skips script and style elements entirely', () => {
     const container = setup(
-      '<div>Keep</div><img src="x"/><svg></svg><script>1</script>'
+      '<div>Keep</div><script>1</script><style>.x { color: red }</style>'
     )
     const result = walkDocument(container, 1440)
 
     expect(result.root.children).toHaveLength(1)
     const child = result.root.children[0]
     expect(child.type).toBe('text')
+  })
+
+  it('captures <img> as IRImage with sourceUrl and pending status for remote URLs', () => {
+    const container = setup(
+      '<img src="https://example.com/foo.jpg" width="200" height="100" />'
+    )
+    const result = walkDocument(container, 1440)
+
+    expect(result.root.children).toHaveLength(1)
+    const child = result.root.children[0]
+    expect(child.type).toBe('image')
+    if (child.type === 'image') {
+      expect(child.sourceUrl).toBe('https://example.com/foo.jpg')
+      expect(child.loadStatus).toBe('pending')
+      expect(child.bytes).toBeNull()
+    }
+  })
+
+  it('marks data URL images as data-url status', () => {
+    const tinyPng =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+    const container = setup(`<img src="${tinyPng}" width="10" height="10" />`)
+    const result = walkDocument(container, 1440)
+
+    const child = result.root.children[0]
+    expect(child.type).toBe('image')
+    if (child.type === 'image') {
+      expect(child.loadStatus).toBe('data-url')
+    }
+  })
+
+  it('captures <svg> as IRSvg with raw markup', () => {
+    const container = setup(
+      '<svg width="100" height="50" viewBox="0 0 100 50"><circle cx="50" cy="25" r="20" fill="red"/></svg>'
+    )
+    const result = walkDocument(container, 1440)
+
+    const child = result.root.children[0]
+    expect(child.type).toBe('svg')
+    if (child.type === 'svg') {
+      expect(child.svg).toContain('<svg')
+      expect(child.svg).toContain('<circle')
+    }
   })
 
   it('extracts background color as solid fill in 0-1 space', () => {
