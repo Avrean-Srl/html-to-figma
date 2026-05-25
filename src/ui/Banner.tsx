@@ -1,10 +1,24 @@
 import { h } from 'preact'
 
-// Brand header. Tailored small SVG instead of an external image so the
-// bundle stays slim and the asset is themable. Inspired by the "code
-// becomes design" idea: a code-bracket glyph on the left, a brand
-// gradient bar, and two filled squares hinting at Figma frames on the
-// right.
+// ============================================================================
+// REPLACING THE BANNER
+//
+// Two paths, both documented in detail in assets/ui/README.md:
+//
+//   A. Swap the <svg> markup below with your exported SVG. Keep the
+//      wrapping <div> for the gradient background, or drop it for an
+//      edge-to-edge banner.
+//
+//   B. Drop in a raster PNG/JPG: replace the <svg>...</svg> block with
+//      <img src="data:image/png;base64,..." style={{ display: 'block',
+//      width: '100%', height: 'auto' }} />, where the base64 is the
+//      output of `base64 -w0 your-image.png` (or any encoder).
+//
+// Constraints: max 480 px wide (UI width), recommend 80–120 px tall.
+// Colors should hold on both Figma dark and light themes, or paint a
+// background inside your image.
+// ============================================================================
+
 export function Banner() {
   return (
     <div
