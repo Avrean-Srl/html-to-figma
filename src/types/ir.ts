@@ -149,6 +149,7 @@ export type ImageLoadStatus =
   | 'cors-blocked'
   | 'network-error'
   | 'not-found'
+  | 'format-unsupported'
 
 export interface IRDocument {
   viewportWidth: number
@@ -165,5 +166,5 @@ export interface IRFontRef {
 
 export interface IRImageFailure {
   sourceUrl: string
-  reason: Exclude<ImageLoadStatus, 'ok' | 'data-url'>
+  reason: Exclude<ImageLoadStatus, 'ok' | 'data-url' | 'pending'>
 }

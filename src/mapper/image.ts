@@ -19,14 +19,26 @@ export function createImageFromIR(ir: IRImage): RectangleNode {
   rect.opacity = ir.opacity
 
   if (ir.bytes !== null) {
-    const img = figma.createImage(ir.bytes)
-    rect.fills = [
-      {
-        type: 'IMAGE',
-        imageHash: img.hash,
-        scaleMode: mapObjectFit(ir.objectFit)
-      }
-    ]
+    try {
+      const img = figma.createImage(ir.bytes)
+      rect.fills = [
+        {
+          type: 'IMAGE',
+          imageHash: img.hash,
+          scaleMode: mapObjectFit(ir.objectFit)
+        }
+      ]
+    } catch {
+      // Belt-and-suspenders: loadImages should have caught unsupported
+      // formats via magic-number sniffing, but Figma occasionally
+      // rejects bytes that pass the sniff (truncated PNGs, exotic JPEG
+      // variants, etc.). Don't let a single bad image kill the whole
+      // import — render the placeholder instead.
+      rect.name = '[image format unsupported]'
+      rect.fills = [
+        { type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 }, opacity: 1 }
+      ]
+    }
   } else {
     // Placeholder grey — keeps layout box visible.
     rect.fills = [

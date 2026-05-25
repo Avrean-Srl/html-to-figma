@@ -3,27 +3,42 @@ import type { IRDocument, IRImage, IRImageFailure, IRNode } from '../types/ir'
 // After the synchronous walker pass we have IRImage nodes with bytes=null
 // and loadStatus='pending' for any non-data-url image and loadStatus
 // 'data-url' for inline data URLs. This pass fills bytes in by decoding
-// data URLs and fetching network URLs in parallel. CORS failures and
-// other network errors are caught per-image so a single bad src does
-// not fail the whole import.
+// data URLs and fetching network URLs in parallel. CORS failures, other
+// network errors, AND unsupported image formats are caught per-image so
+// a single bad src does not fail the whole import.
 export async function loadImages(doc: IRDocument): Promise<void> {
   const images = collectImages(doc.root)
 
   await Promise.all(images.map(async (ir) => {
     if (ir.loadStatus === 'data-url') {
-      ir.bytes = decodeDataUrl(ir.sourceUrl)
-      if (ir.bytes === null) ir.loadStatus = 'network-error'
+      const bytes = decodeDataUrl(ir.sourceUrl)
+      if (bytes === null) {
+        ir.bytes = null
+        ir.loadStatus = 'network-error'
+        return
+      }
+      if (!isSupportedImageFormat(bytes)) {
+        ir.bytes = null
+        ir.loadStatus = 'format-unsupported'
+        return
+      }
+      ir.bytes = bytes
       return
     }
     if (ir.loadStatus !== 'pending') return
-    const bytes = await fetchImageBytes(ir.sourceUrl)
-    if (bytes.kind === 'ok') {
-      ir.bytes = bytes.data
-      ir.loadStatus = 'ok'
-    } else {
+    const fetched = await fetchImageBytes(ir.sourceUrl)
+    if (fetched.kind !== 'ok') {
       ir.bytes = null
-      ir.loadStatus = bytes.reason
+      ir.loadStatus = fetched.reason
+      return
     }
+    if (!isSupportedImageFormat(fetched.data)) {
+      ir.bytes = null
+      ir.loadStatus = 'format-unsupported'
+      return
+    }
+    ir.bytes = fetched.data
+    ir.loadStatus = 'ok'
   }))
 
   // Propagate failures to the document-level imageFailures list so the
@@ -32,10 +47,31 @@ export async function loadImages(doc: IRDocument): Promise<void> {
     .filter((ir) => ir.bytes === null && ir.loadStatus !== 'data-url')
     .map<IRImageFailure>((ir) => ({
       sourceUrl: ir.sourceUrl,
-      // Narrowing: at this point loadStatus is not 'pending' (we awaited),
-      // not 'ok', not 'data-url' — it's one of the three failure reasons.
-      reason: (ir.loadStatus as 'cors-blocked' | 'network-error' | 'not-found')
+      reason: ir.loadStatus as IRImageFailure['reason']
     }))
+}
+
+// Magic-number sniffing for the formats Figma's createImage accepts:
+// PNG, JPEG, GIF. WebP, AVIF, SVG, etc. all bounce here.
+function isSupportedImageFormat(bytes: Uint8Array): boolean {
+  if (bytes.length < 4) return false
+  // PNG: 89 50 4E 47
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) return true
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return true
+  // GIF: 47 49 46 38 ("GIF8")
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38
+  ) return true
+  return false
 }
 
 function collectImages(node: IRNode): IRImage[] {
