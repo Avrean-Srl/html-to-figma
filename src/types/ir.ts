@@ -10,7 +10,28 @@ export interface IRNodeBase {
   layout: IRLayout
   opacity: number
   hidden: boolean
+  blendMode: IRBlendMode
 }
+
+// Matches CSS mix-blend-mode names. 1:1 mapping to Figma BlendMode
+// enum (uppercase with underscores) at the mapper.
+export type IRBlendMode =
+  | 'normal'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'darken'
+  | 'lighten'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'hard-light'
+  | 'soft-light'
+  | 'difference'
+  | 'exclusion'
+  | 'hue'
+  | 'saturation'
+  | 'color'
+  | 'luminosity'
 
 export interface IRLayout {
   x: number
@@ -26,6 +47,24 @@ export interface IRFrame extends IRNodeBase {
   cornerRadius: CornerRadius
   children: IRNode[]
   autoLayout: IRAutoLayout | null
+  shadows: IRShadow[]
+  stroke: IRStroke | null
+}
+
+export interface IRShadow {
+  type: 'drop' | 'inner'
+  offsetX: number
+  offsetY: number
+  blur: number
+  spread: number
+  color: IRColor
+}
+
+// Phase 3.1 supports uniform border only. Per-side borders (e.g.
+// border-bottom only) need a workaround — deferred.
+export interface IRStroke {
+  color: IRColor
+  width: number
 }
 
 export interface IRText extends IRNodeBase {

@@ -12,11 +12,14 @@ function frame(overrides: Partial<IRFrame> = {}): IRFrame {
     layout: { x: 0, y: 0, width: 100, height: 100 },
     opacity: 1,
     hidden: false,
+    blendMode: 'normal',
     sourceTag: 'div',
     fills: [],
     cornerRadius: [0, 0, 0, 0],
     children: [],
     autoLayout: null,
+    shadows: [],
+    stroke: null,
     ...overrides
   }
 }
@@ -28,6 +31,7 @@ function text(overrides: Partial<IRText> = {}): IRText {
     layout: { x: 0, y: 0, width: 100, height: 20 },
     opacity: 1,
     hidden: false,
+    blendMode: 'normal',
     characters: 'Hello',
     fontFamily: 'Inter',
     fontSize: 16,

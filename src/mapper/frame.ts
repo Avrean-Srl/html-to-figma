@@ -1,5 +1,7 @@
 import type { IRFrame } from '../types/ir'
 
+import { buildShadowEffects, mapBlendMode } from './effects'
+
 // Builds a FrameNode from an IRFrame. x/y placement is deferred to the
 // orchestrator because frames are positioned relative to their parent
 // in Figma; the IR carries container-absolute coordinates.
@@ -30,6 +32,35 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
     frame.topRightRadius = tr
     frame.bottomRightRadius = br
     frame.bottomLeftRadius = bl
+  }
+
+  if (ir.shadows.length > 0) {
+    frame.effects = buildShadowEffects(ir.shadows)
+  }
+
+  if (ir.stroke !== null) {
+    frame.strokes = [
+      {
+        type: 'SOLID',
+        color: {
+          r: ir.stroke.color.r,
+          g: ir.stroke.color.g,
+          b: ir.stroke.color.b
+        },
+        opacity: ir.stroke.color.a
+      }
+    ]
+    frame.strokeWeight = ir.stroke.width
+    // INSIDE matches box-sizing: border-box visually — the border lives
+    // within the frame box rather than extending it.
+    frame.strokeAlign = 'INSIDE'
+  }
+
+  // Only override the default frame blendMode ('PASS_THROUGH') when the
+  // CSS author asked for something specific. Leaving 'normal' alone
+  // keeps Figma's natural group-blending semantics.
+  if (ir.blendMode !== 'normal') {
+    frame.blendMode = mapBlendMode(ir.blendMode)
   }
 
   // Phase 1 has no Auto Layout (D1 / Phase 2). Children are absolutely

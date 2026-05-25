@@ -1,10 +1,15 @@
 import type {
   CornerRadius,
+  IRBlendMode,
   IRColor,
   IRFill,
-  IRFontRef
+  IRFontRef,
+  IRShadow,
+  IRStroke
 } from '../types/ir'
+
 import { parseColor } from './color'
+import { parseBoxShadow } from './shadow'
 
 export function extractFills(cs: CSSStyleDeclaration): IRFill[] {
   const color = parseColor(cs.backgroundColor)
@@ -85,6 +90,72 @@ export function extractOpacity(cs: CSSStyleDeclaration): number {
 
 export function isHidden(cs: CSSStyleDeclaration): boolean {
   return cs.display === 'none' || cs.visibility === 'hidden'
+}
+
+export function extractShadows(cs: CSSStyleDeclaration): IRShadow[] {
+  return parseBoxShadow(cs.boxShadow)
+}
+
+// Uniform border only in Phase 3.1. Per-side borders (e.g. border-bottom
+// only) are CSS-common but Figma has no per-side stroke — that's a
+// separate workaround pass (synthetic thin frames as borders) deferred.
+// We detect uniform borders by requiring all four sides to match.
+export function extractStroke(cs: CSSStyleDeclaration): IRStroke | null {
+  const widths = [
+    parseFloat(cs.borderTopWidth) || 0,
+    parseFloat(cs.borderRightWidth) || 0,
+    parseFloat(cs.borderBottomWidth) || 0,
+    parseFloat(cs.borderLeftWidth) || 0
+  ]
+  if (widths.every((w) => w === 0)) return null
+
+  const styles = [
+    cs.borderTopStyle,
+    cs.borderRightStyle,
+    cs.borderBottomStyle,
+    cs.borderLeftStyle
+  ]
+  if (styles.some((s) => s === 'none' || s === 'hidden')) return null
+
+  // Reject per-side borders: all four widths and colors must match.
+  if (!widths.every((w) => w === widths[0])) return null
+
+  const colors = [
+    cs.borderTopColor,
+    cs.borderRightColor,
+    cs.borderBottomColor,
+    cs.borderLeftColor
+  ]
+  if (!colors.every((c) => c === colors[0])) return null
+
+  return {
+    width: widths[0],
+    color: parseColor(colors[0])
+  }
+}
+
+export function extractBlendMode(cs: CSSStyleDeclaration): IRBlendMode {
+  const m = cs.mixBlendMode
+  switch (m) {
+    case 'multiply':
+    case 'screen':
+    case 'overlay':
+    case 'darken':
+    case 'lighten':
+    case 'color-dodge':
+    case 'color-burn':
+    case 'hard-light':
+    case 'soft-light':
+    case 'difference':
+    case 'exclusion':
+    case 'hue':
+    case 'saturation':
+    case 'color':
+    case 'luminosity':
+      return m
+    default:
+      return 'normal'
+  }
 }
 
 // True when an element carries visual styling that would be lost if we

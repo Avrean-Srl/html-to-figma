@@ -8,12 +8,15 @@ import type {
 } from '../types/ir'
 import { extractAutoLayout } from './auto-layout'
 import {
+  extractBlendMode,
   extractCornerRadius,
   extractFills,
   extractFontRef,
   extractLetterSpacing,
   extractLineHeight,
   extractOpacity,
+  extractShadows,
+  extractStroke,
   extractTextAlign,
   extractTextColor,
   extractTextDecoration,
@@ -82,11 +85,14 @@ export function walkDocument(
     },
     opacity: 1,
     hidden: false,
+    blendMode: 'normal',
     sourceTag: 'body',
     fills: extractFills(bodyCs),
     cornerRadius: [0, 0, 0, 0],
     children,
-    autoLayout: null
+    autoLayout: null,
+    shadows: [],
+    stroke: null
   }
 
   return {
@@ -181,11 +187,14 @@ function buildFrame(
     layout,
     opacity: extractOpacity(cs),
     hidden: false,
+    blendMode: extractBlendMode(cs),
     sourceTag: tag,
     fills: extractFills(cs),
     cornerRadius: extractCornerRadius(cs),
     children,
-    autoLayout: extractAutoLayout(cs)
+    autoLayout: extractAutoLayout(cs),
+    shadows: extractShadows(cs),
+    stroke: extractStroke(cs)
   }
 }
 
@@ -205,6 +214,7 @@ function buildText(
     layout,
     opacity: extractOpacity(cs),
     hidden: false,
+    blendMode: extractBlendMode(cs),
     characters: text,
     fontFamily: fontRef.family,
     fontSize,
@@ -253,6 +263,7 @@ function buildLooseText(
     layout,
     opacity: extractOpacity(parentCs),
     hidden: false,
+    blendMode: extractBlendMode(parentCs),
     characters: text,
     fontFamily: fontRef.family,
     fontSize,

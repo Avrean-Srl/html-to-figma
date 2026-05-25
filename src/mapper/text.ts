@@ -1,5 +1,7 @@
 import type { IRText } from '../types/ir'
 
+import { mapBlendMode } from './effects'
+
 // Builds a TextNode from an IRText. fontName must be assigned before
 // characters per Figma API contract, and the font must already be
 // loaded — the mapper orchestrator batch-loads via fonts.ts before
@@ -57,6 +59,10 @@ export function createTextFromIR(ir: IRText, fontName: FontName): TextNode {
     text.textDecoration = 'UNDERLINE'
   } else if (ir.textDecoration === 'line-through') {
     text.textDecoration = 'STRIKETHROUGH'
+  }
+
+  if (ir.blendMode !== 'normal') {
+    text.blendMode = mapBlendMode(ir.blendMode)
   }
 
   return text

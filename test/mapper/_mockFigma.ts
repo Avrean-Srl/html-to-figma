@@ -16,6 +16,8 @@ export interface MockNode {
   parent: MockNode | null
   resize: (w: number, h: number) => void
   appendChild: (child: MockNode) => void
+  blendMode?: string
+  effects?: unknown[]
   // Frame-only
   cornerRadius?: number
   topLeftRadius?: number
@@ -23,6 +25,9 @@ export interface MockNode {
   bottomRightRadius?: number
   bottomLeftRadius?: number
   clipsContent?: boolean
+  strokes?: unknown[]
+  strokeWeight?: number
+  strokeAlign?: 'INSIDE' | 'OUTSIDE' | 'CENTER'
   // Text-only
   characters?: string
   fontName?: { family: string; style: string }
