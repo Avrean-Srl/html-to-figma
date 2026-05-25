@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Effects stress test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 48px;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+    p.sub { margin: 0 0 32px; color: #64748b; font-size: 14px; }
+    h2 { margin: 32px 0 16px; font-size: 16px; font-weight: 700; color: #1e293b; }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      margin-bottom: 16px;
+    }
+    .item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .item .label { font-size: 12px; color: #475569; font-family: ui-monospace, Menlo, monospace; }
+    .item .box {
+      width: 200px;
+      height: 120px;
+      background: #ffffff;
+      border-radius: 12px;
+    }
+    .item .box.has-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* --- Shadows --- */
+    .shadow-sm   { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); }
+    .shadow-md   { box-shadow: 0 4px 6px rgba(15, 23, 42, 0.10), 0 2px 4px rgba(15, 23, 42, 0.06); }
+    .shadow-lg   { box-shadow: 0 10px 15px rgba(15, 23, 42, 0.12), 0 4px 6px rgba(15, 23, 42, 0.06); }
+    .shadow-xl   { box-shadow: 0 20px 25px rgba(15, 23, 42, 0.14), 0 10px 10px rgba(15, 23, 42, 0.05); }
+    .shadow-2xl  { box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25); }
+    .shadow-color { box-shadow: 0 10px 30px rgba(139, 92, 246, 0.45); }
+    .shadow-inset       { box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.10); }
+    .shadow-inset-deep  { box-shadow: inset 0 6px 12px rgba(15, 23, 42, 0.25); }
+    .shadow-inset-outer { box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+    .shadow-multi {
+      box-shadow:
+        0 0 0 4px rgba(139, 92, 246, 0.15),
+        0 6px 12px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    /* --- Border radius variations --- */
+    .r-0    { border-radius: 0; }
+    .r-4    { border-radius: 4px; }
+    .r-12   { border-radius: 12px; }
+    .r-24   { border-radius: 24px; }
+    .r-full { border-radius: 9999px; }
+    .r-corners-mixed {
+      border-top-left-radius: 0;
+      border-top-right-radius: 32px;
+      border-bottom-right-radius: 0;
+      border-bottom-left-radius: 32px;
+    }
+
+    /* --- Borders --- */
+    .b-1-slate    { border: 1px solid #cbd5e1; }
+    .b-2-violet   { border: 2px solid #8b5cf6; }
+    .b-4-emerald  { border: 4px solid #10b981; }
+    .b-thick-rose { border: 8px solid #f43f5e; }
+    .b-rgba       { border: 2px solid rgba(15, 23, 42, 0.2); }
+    .b-radius-combo { border: 2px solid #6d28d9; border-radius: 16px; }
+
+    /* --- Mix blend modes --- */
+    .blend-grid {
+      position: relative;
+      width: 480px;
+      height: 200px;
+      background: linear-gradient(90deg, #f97316, #db2777, #6366f1, #06b6d4);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .blend-blob {
+      position: absolute;
+      top: 30px;
+      width: 140px;
+      height: 140px;
+      border-radius: 9999px;
+    }
+    .blob-multiply { left: 40px; background: #ffffff; mix-blend-mode: multiply; }
+    .blob-screen   { left: 200px; background: #000000; mix-blend-mode: screen; }
+    .blob-overlay  { left: 320px; background: #fbbf24; mix-blend-mode: overlay; }
+
+    /* --- Opacity --- */
+    .opacity-100 { opacity: 1; }
+    .opacity-75  { opacity: 0.75; }
+    .opacity-50  { opacity: 0.5; }
+    .opacity-25  { opacity: 0.25; }
+    .opacity-10  { opacity: 0.1; }
+  </style>
+</head>
+<body>
+  <h1>Effects stress test</h1>
+  <p class="sub">Shadows, border radius, borders, blend modes, opacity. Each cell labels the rule under test.</p>
+
+  <h2>Drop shadows (outer)</h2>
+  <div class="grid">
+    <div class="item"><div class="box shadow-sm">  </div><div class="label">shadow-sm</div></div>
+    <div class="item"><div class="box shadow-md">  </div><div class="label">shadow-md (2 layers)</div></div>
+    <div class="item"><div class="box shadow-lg">  </div><div class="label">shadow-lg (2 layers)</div></div>
+    <div class="item"><div class="box shadow-xl">  </div><div class="label">shadow-xl (2 layers)</div></div>
+    <div class="item"><div class="box shadow-2xl"> </div><div class="label">shadow-2xl (deep)</div></div>
+    <div class="item"><div class="box shadow-color"></div><div class="label">colored violet</div></div>
+  </div>
+
+  <h2>Inset and mixed shadows</h2>
+  <div class="grid">
+    <div class="item"><div class="box shadow-inset">      </div><div class="label">inset shallow</div></div>
+    <div class="item"><div class="box shadow-inset-deep"> </div><div class="label">inset deep</div></div>
+    <div class="item"><div class="box shadow-inset-outer has-text">A</div><div class="label">outer + inset highlight</div></div>
+    <div class="item"><div class="box shadow-multi has-text">B</div><div class="label">3 shadows (ring + drop + highlight)</div></div>
+  </div>
+
+  <h2>Border radius</h2>
+  <div class="grid">
+    <div class="item"><div class="box shadow-md r-0">     </div><div class="label">0px</div></div>
+    <div class="item"><div class="box shadow-md r-4">     </div><div class="label">4px</div></div>
+    <div class="item"><div class="box shadow-md r-12">    </div><div class="label">12px</div></div>
+    <div class="item"><div class="box shadow-md r-24">    </div><div class="label">24px</div></div>
+    <div class="item"><div class="box shadow-md r-full">  </div><div class="label">9999px (pill)</div></div>
+    <div class="item"><div class="box shadow-md r-corners-mixed"></div><div class="label">corners: tr+bl rounded only</div></div>
+  </div>
+
+  <h2>Borders</h2>
+  <div class="grid">
+    <div class="item"><div class="box b-1-slate">    </div><div class="label">1px solid slate</div></div>
+    <div class="item"><div class="box b-2-violet">   </div><div class="label">2px solid violet</div></div>
+    <div class="item"><div class="box b-4-emerald">  </div><div class="label">4px solid emerald</div></div>
+    <div class="item"><div class="box b-thick-rose"> </div><div class="label">8px solid rose</div></div>
+    <div class="item"><div class="box b-rgba">       </div><div class="label">2px rgba 0.2</div></div>
+    <div class="item"><div class="box b-radius-combo"></div><div class="label">border + radius 16</div></div>
+  </div>
+
+  <h2>Mix blend modes (over rainbow gradient)</h2>
+  <div class="blend-grid">
+    <div class="blend-blob blob-multiply"></div>
+    <div class="blend-blob blob-screen"></div>
+    <div class="blend-blob blob-overlay"></div>
+  </div>
+
+  <h2>Opacity</h2>
+  <div class="grid">
+    <div class="item"><div class="box shadow-md opacity-100" style="background: #6d28d9;"></div><div class="label">1.0</div></div>
+    <div class="item"><div class="box shadow-md opacity-75"  style="background: #6d28d9;"></div><div class="label">0.75</div></div>
+    <div class="item"><div class="box shadow-md opacity-50"  style="background: #6d28d9;"></div><div class="label">0.5</div></div>
+    <div class="item"><div class="box shadow-md opacity-25"  style="background: #6d28d9;"></div><div class="label">0.25</div></div>
+    <div class="item"><div class="box shadow-md opacity-10"  style="background: #6d28d9;"></div><div class="label">0.1</div></div>
+  </div>
+</body>
+</html>

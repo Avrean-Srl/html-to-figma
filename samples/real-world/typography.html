@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Typography stress test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 48px;
+    }
+    h1 { margin: 0 0 8px; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
+    p.sub { margin: 0 0 32px; color: #64748b; font-size: 14px; }
+
+    section {
+      margin-bottom: 40px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    h2 {
+      margin: 0 0 20px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .row .label {
+      width: 140px;
+      font-size: 12px;
+      color: #64748b;
+      font-family: ui-monospace, Menlo, monospace;
+      flex-shrink: 0;
+    }
+    .row .sample {
+      flex: 1;
+    }
+
+    /* Font weights */
+    .w-100 { font-weight: 100; }
+    .w-200 { font-weight: 200; }
+    .w-300 { font-weight: 300; }
+    .w-400 { font-weight: 400; }
+    .w-500 { font-weight: 500; }
+    .w-600 { font-weight: 600; }
+    .w-700 { font-weight: 700; }
+    .w-800 { font-weight: 800; }
+    .w-900 { font-weight: 900; }
+
+    /* Font sizes */
+    .fs-12 { font-size: 12px; }
+    .fs-14 { font-size: 14px; }
+    .fs-16 { font-size: 16px; }
+    .fs-20 { font-size: 20px; }
+    .fs-24 { font-size: 24px; }
+    .fs-32 { font-size: 32px; }
+    .fs-48 { font-size: 48px; line-height: 1.05; }
+    .fs-64 { font-size: 64px; line-height: 1; }
+
+    /* Styles */
+    .italic { font-style: italic; }
+    .underline { text-decoration: underline; }
+    .line-through { text-decoration: line-through; }
+    .both { text-decoration: underline line-through; }
+
+    /* Letter spacing */
+    .tracker-tight  { letter-spacing: -0.04em; }
+    .tracker-snug   { letter-spacing: -0.02em; }
+    .tracker-wide   { letter-spacing: 0.04em; }
+    .tracker-widest { letter-spacing: 0.1em; }
+
+    /* Line height */
+    .lh-tight  { line-height: 1.0; }
+    .lh-snug   { line-height: 1.2; }
+    .lh-normal { line-height: 1.5; }
+    .lh-loose  { line-height: 2.0; }
+
+    /* Alignment */
+    .align-left   { text-align: left; }
+    .align-center { text-align: center; }
+    .align-right  { text-align: right; }
+
+    /* Colors */
+    .c-slate-900 { color: #0f172a; }
+    .c-slate-500 { color: #64748b; }
+    .c-violet    { color: #6d28d9; }
+    .c-rose      { color: #e11d48; }
+    .c-emerald   { color: #059669; }
+
+    .paragraph {
+      max-width: 640px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #334155;
+    }
+    .paragraph strong { font-weight: 700; color: #0f172a; }
+    .paragraph em { font-style: italic; }
+    .paragraph .accent { color: #6d28d9; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Typography stress test</h1>
+  <p class="sub">Each row labels the property under test. If the label and the rendered text disagree, that feature is broken.</p>
+
+  <section>
+    <h2>Font weights 100 to 900</h2>
+    <div class="row"><div class="label">font-weight: 100</div><div class="sample fs-24 w-100">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 200</div><div class="sample fs-24 w-200">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 300</div><div class="sample fs-24 w-300">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 400</div><div class="sample fs-24 w-400">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 500</div><div class="sample fs-24 w-500">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 600</div><div class="sample fs-24 w-600">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 700</div><div class="sample fs-24 w-700">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 800</div><div class="sample fs-24 w-800">The quick brown fox jumps over the lazy dog.</div></div>
+    <div class="row"><div class="label">font-weight: 900</div><div class="sample fs-24 w-900">The quick brown fox jumps over the lazy dog.</div></div>
+  </section>
+
+  <section>
+    <h2>Font sizes</h2>
+    <div class="row"><div class="label">12px</div><div class="sample fs-12 w-500">12 / size sample text</div></div>
+    <div class="row"><div class="label">14px</div><div class="sample fs-14 w-500">14 / size sample text</div></div>
+    <div class="row"><div class="label">16px</div><div class="sample fs-16 w-500">16 / size sample text</div></div>
+    <div class="row"><div class="label">20px</div><div class="sample fs-20 w-500">20 / size sample text</div></div>
+    <div class="row"><div class="label">24px</div><div class="sample fs-24 w-500">24 / size sample text</div></div>
+    <div class="row"><div class="label">32px</div><div class="sample fs-32 w-600">32 / size sample text</div></div>
+    <div class="row"><div class="label">48px</div><div class="sample fs-48 w-700">48 / size sample text</div></div>
+    <div class="row"><div class="label">64px</div><div class="sample fs-64 w-800">64 / size text</div></div>
+  </section>
+
+  <section>
+    <h2>Italic, underline, line-through</h2>
+    <div class="row"><div class="label">italic</div><div class="sample fs-20 italic">A line of italic text.</div></div>
+    <div class="row"><div class="label">italic bold</div><div class="sample fs-20 italic w-700">A line of italic bold text.</div></div>
+    <div class="row"><div class="label">underline</div><div class="sample fs-20 underline">A line of underlined text.</div></div>
+    <div class="row"><div class="label">line-through</div><div class="sample fs-20 line-through">A line of strikethrough text.</div></div>
+    <div class="row"><div class="label">both</div><div class="sample fs-20 both">A line of both decorations.</div></div>
+  </section>
+
+  <section>
+    <h2>Letter spacing</h2>
+    <div class="row"><div class="label">-0.04em</div><div class="sample fs-32 w-700 tracker-tight">DISPLAY HEADLINE</div></div>
+    <div class="row"><div class="label">-0.02em</div><div class="sample fs-32 w-700 tracker-snug">DISPLAY HEADLINE</div></div>
+    <div class="row"><div class="label">0</div><div class="sample fs-32 w-700">DISPLAY HEADLINE</div></div>
+    <div class="row"><div class="label">0.04em</div><div class="sample fs-32 w-700 tracker-wide">DISPLAY HEADLINE</div></div>
+    <div class="row"><div class="label">0.1em</div><div class="sample fs-32 w-700 tracker-widest">DISPLAY HEADLINE</div></div>
+  </section>
+
+  <section>
+    <h2>Line height (multi-line)</h2>
+    <div class="row"><div class="label">1.0 (tight)</div><div class="sample fs-16 lh-tight" style="max-width: 320px;">A first line of text. A second line of text. A third line of text.</div></div>
+    <div class="row"><div class="label">1.2 (snug)</div><div class="sample fs-16 lh-snug" style="max-width: 320px;">A first line of text. A second line of text. A third line of text.</div></div>
+    <div class="row"><div class="label">1.5 (normal)</div><div class="sample fs-16 lh-normal" style="max-width: 320px;">A first line of text. A second line of text. A third line of text.</div></div>
+    <div class="row"><div class="label">2.0 (loose)</div><div class="sample fs-16 lh-loose" style="max-width: 320px;">A first line of text. A second line of text. A third line of text.</div></div>
+  </section>
+
+  <section>
+    <h2>Alignment</h2>
+    <div class="fs-20 w-500 align-left"   style="border-left: 3px solid #e2e8f0; padding: 8px 12px;">Left aligned text</div>
+    <div class="fs-20 w-500 align-center" style="border-left: 3px solid #e2e8f0; padding: 8px 12px; margin-top: 8px;">Center aligned text</div>
+    <div class="fs-20 w-500 align-right"  style="border-left: 3px solid #e2e8f0; padding: 8px 12px; margin-top: 8px;">Right aligned text</div>
+  </section>
+
+  <section>
+    <h2>Colors</h2>
+    <div class="row"><div class="label">slate-900</div><div class="sample fs-20 w-500 c-slate-900">Primary text</div></div>
+    <div class="row"><div class="label">slate-500</div><div class="sample fs-20 w-500 c-slate-500">Secondary text</div></div>
+    <div class="row"><div class="label">violet</div><div class="sample fs-20 w-500 c-violet">Accent text</div></div>
+    <div class="row"><div class="label">rose</div><div class="sample fs-20 w-500 c-rose">Destructive text</div></div>
+    <div class="row"><div class="label">emerald</div><div class="sample fs-20 w-500 c-emerald">Success text</div></div>
+  </section>
+
+  <section>
+    <h2>Mixed inline styles in a paragraph</h2>
+    <p class="paragraph">
+      Most product copy is plain text with the occasional <strong>bold accent</strong>, an <em>italic aside</em>, or a <span class="accent">colored callout</span>. The parser should split runs by style change while keeping the visual baseline consistent. This sentence is intentionally long to exercise text wrapping at the 640-pixel column width with a 1.6 line-height.
+    </p>
+  </section>
+</body>
+</html>

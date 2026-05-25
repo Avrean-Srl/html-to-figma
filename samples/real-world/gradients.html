@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Gradients stress test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; padding: 48px; }
+    h1 { margin: 0 0 8px; font-size: 32px; font-weight: 700; }
+    h2 { margin: 32px 0 16px; font-size: 18px; font-weight: 600; color: #475569; }
+    p.sub { margin: 0 0 24px; color: #64748b; font-size: 14px; }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .swatch {
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .swatch .box {
+      width: 240px;
+      height: 160px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .swatch .label {
+      font-size: 13px;
+      color: #334155;
+      font-weight: 500;
+    }
+    .swatch .meta {
+      font-size: 12px;
+      color: #64748b;
+      font-family: ui-monospace, Menlo, monospace;
+    }
+
+    /* --- Linear gradients with various angles --- */
+    .lin-0   { background: linear-gradient(0deg,   #8b5cf6, #ec4899); }
+    .lin-45  { background: linear-gradient(45deg,  #8b5cf6, #ec4899); }
+    .lin-90  { background: linear-gradient(90deg,  #8b5cf6, #ec4899); }
+    .lin-135 { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
+    .lin-180 { background: linear-gradient(180deg, #8b5cf6, #ec4899); }
+    .lin-270 { background: linear-gradient(270deg, #8b5cf6, #ec4899); }
+
+    /* --- "to <direction>" syntax --- */
+    .to-right       { background: linear-gradient(to right,        #10b981, #0ea5e9); }
+    .to-bottom      { background: linear-gradient(to bottom,       #10b981, #0ea5e9); }
+    .to-bottom-right { background: linear-gradient(to bottom right, #10b981, #0ea5e9); }
+
+    /* --- Multi-stop linear --- */
+    .multi-stop {
+      background: linear-gradient(90deg, #f43f5e 0%, #f97316 33%, #eab308 66%, #22c55e 100%);
+    }
+
+    /* --- rgba stops with alpha fade --- */
+    .alpha-fade {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(99, 102, 241, 0));
+      /* Show alpha on a checkerboard-style backdrop */
+      background-color: #0f172a;
+    }
+
+    /* --- Radial gradients --- */
+    .radial-basic   { background: radial-gradient(#fbbf24, #be123c); }
+    .radial-circle  { background: radial-gradient(circle, #fbbf24, #be123c); }
+    .radial-at-pos  { background: radial-gradient(circle at 20% 20%, #fbbf24, transparent 70%), #be123c; }
+    .radial-multi   {
+      background:
+        radial-gradient(circle at 30% 30%, rgba(236, 72, 153, 0.4), transparent 50%),
+        radial-gradient(circle at 70% 70%, rgba(14, 165, 233, 0.4), transparent 50%),
+        #0f172a;
+    }
+
+    /* --- Multi-background: gradient + color base --- */
+    .multi-bg {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%),
+        linear-gradient(180deg, #8b5cf6, #6d28d9);
+    }
+
+    /* --- Subtle gradient (the saas-landing button case) --- */
+    .subtle-button {
+      background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+      border: 1px solid #6d28d9;
+      box-shadow: 0 6px 12px rgba(109, 40, 217, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      width: 240px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+
+    /* --- Conic placeholder (unsupported) - parser should drop, base color shows --- */
+    .conic-fallback {
+      background: conic-gradient(red, yellow, green, blue, red);
+      background-color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gradient stress test</h1>
+  <p class="sub">Every swatch labels the gradient it exercises. If anything looks wrong, that combo is broken.</p>
+
+  <h2>Linear gradients at various angles</h2>
+  <div class="grid">
+    <div class="swatch"><div class="box lin-0"></div>   <div class="label">linear-gradient(0deg)</div>   <div class="meta">violet -> pink</div></div>
+    <div class="swatch"><div class="box lin-45"></div>  <div class="label">linear-gradient(45deg)</div>  <div class="meta">violet -> pink</div></div>
+    <div class="swatch"><div class="box lin-90"></div>  <div class="label">linear-gradient(90deg)</div>  <div class="meta">violet -> pink</div></div>
+    <div class="swatch"><div class="box lin-135"></div> <div class="label">linear-gradient(135deg)</div> <div class="meta">violet -> pink</div></div>
+    <div class="swatch"><div class="box lin-180"></div> <div class="label">linear-gradient(180deg)</div> <div class="meta">violet -> pink</div></div>
+    <div class="swatch"><div class="box lin-270"></div> <div class="label">linear-gradient(270deg)</div> <div class="meta">violet -> pink</div></div>
+  </div>
+
+  <h2>"to direction" syntax</h2>
+  <div class="grid">
+    <div class="swatch"><div class="box to-right"></div>        <div class="label">to right</div>         <div class="meta">emerald -> sky</div></div>
+    <div class="swatch"><div class="box to-bottom"></div>       <div class="label">to bottom</div>        <div class="meta">emerald -> sky</div></div>
+    <div class="swatch"><div class="box to-bottom-right"></div> <div class="label">to bottom right</div>  <div class="meta">emerald -> sky</div></div>
+  </div>
+
+  <h2>Multi-stop and alpha</h2>
+  <div class="grid">
+    <div class="swatch"><div class="box multi-stop"></div>  <div class="label">4 stops at 0/33/66/100%</div> <div class="meta">rose -> orange -> yellow -> green</div></div>
+    <div class="swatch"><div class="box alpha-fade"></div>  <div class="label">alpha 1 -> 0</div>            <div class="meta">indigo, dark backdrop</div></div>
+  </div>
+
+  <h2>Radial gradients</h2>
+  <div class="grid">
+    <div class="swatch"><div class="box radial-basic"></div>   <div class="label">radial-gradient default</div>     <div class="meta">amber -> rose</div></div>
+    <div class="swatch"><div class="box radial-circle"></div>  <div class="label">radial-gradient circle</div>      <div class="meta">amber -> rose</div></div>
+    <div class="swatch"><div class="box radial-at-pos"></div>  <div class="label">circle at 20% 20%, transparent 70%</div> <div class="meta">amber dot on rose</div></div>
+    <div class="swatch"><div class="box radial-multi"></div>   <div class="label">two radials over dark base</div>  <div class="meta">pink + cyan, dark</div></div>
+  </div>
+
+  <h2>Multi-background (stacked)</h2>
+  <div class="grid">
+    <div class="swatch"><div class="box multi-bg"></div>      <div class="label">white-fade over violet gradient</div> <div class="meta">stacked linears</div></div>
+    <div class="swatch"><div class="box conic-fallback"></div> <div class="label">conic-gradient (unsupported)</div>     <div class="meta">expect slate fallback</div></div>
+  </div>
+
+  <h2>The button case</h2>
+  <p class="sub">If this looks like a flat purple block, the gradient is failing on small elements. Two purples close in hue, but the gradient direction should still be visible top-to-bottom.</p>
+  <div class="subtle-button">Subtle button (linear 180deg)</div>
+</body>
+</html>

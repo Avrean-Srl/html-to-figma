@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard — complex layout test</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ----- SIDEBAR ----- */
+    .sidebar {
+      width: 260px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 8px;
+    }
+    .brand .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      border-radius: 8px;
+    }
+    .brand .name { font-weight: 700; font-size: 17px; color: #f8fafc; }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .nav-group-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      font-weight: 600;
+      padding: 8px 8px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #cbd5e1;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .nav-item.active {
+      background: rgba(139, 92, 246, 0.15);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.3);
+    }
+    .nav-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: #475569;
+    }
+    .nav-item.active .dot { background: #a78bfa; }
+
+    .user-card {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .user-card .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+    }
+    .user-card .meta { display: flex; flex-direction: column; }
+    .user-card .name { font-size: 13px; font-weight: 600; color: #f8fafc; }
+    .user-card .role { font-size: 11px; color: #94a3b8; }
+
+    /* ----- MAIN ----- */
+    .main {
+      flex: 1;
+      padding: 32px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .topbar .actions { display: flex; gap: 12px; }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-ghost { background: transparent; border-color: #cbd5e1; color: #334155; }
+    .btn-primary {
+      background: linear-gradient(180deg, #8b5cf6, #6d28d9);
+      color: #ffffff;
+      box-shadow: 0 6px 12px rgba(109, 40, 217, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+
+    /* ----- METRIC CARDS ----- */
+    .metrics {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .metric-card {
+      flex: 1;
+      min-width: 220px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .metric-card .label { font-size: 13px; color: #64748b; font-weight: 500; }
+    .metric-card .value { font-size: 30px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+    .metric-card .trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      width: max-content;
+    }
+    .trend-up   { color: #047857; background: rgba(16, 185, 129, 0.12); }
+    .trend-down { color: #b91c1c; background: rgba(244, 63, 94, 0.12); }
+    .trend-flat { color: #475569; background: rgba(100, 116, 139, 0.12); }
+
+    /* ----- TWO-COLUMN ROW ----- */
+    .two-col {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .panel {
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .panel-wide { flex: 2; min-width: 420px; }
+    .panel-narrow { flex: 1; min-width: 280px; }
+    .panel-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+    .panel-sub { font-size: 13px; color: #64748b; margin-top: -8px; }
+
+    /* Activity list */
+    .activity { display: flex; flex-direction: column; gap: 12px; }
+    .activity-row {
+      display: flex;
+      gap: 14px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #f8fafc;
+      align-items: flex-start;
+    }
+    .activity-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 9999px;
+      flex-shrink: 0;
+    }
+    .av-a { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .av-b { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .av-c { background: linear-gradient(135deg, #06b6d4, #10b981); }
+    .activity-body { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .activity-body .text { font-size: 14px; color: #0f172a; line-height: 1.45; }
+    .activity-body .text strong { font-weight: 700; }
+    .activity-body .time { font-size: 12px; color: #94a3b8; }
+
+    /* Faux chart */
+    .chart {
+      height: 180px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(139, 92, 246, 0.18), rgba(139, 92, 246, 0));
+      border: 1px solid #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-line {
+      position: absolute;
+      top: 30px;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899);
+      border-radius: 9999px;
+    }
+    .chart-grid {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0) 33%, rgba(0, 0, 0, 0.04) 33%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0) 66%, rgba(0, 0, 0, 0.04) 66%, rgba(0, 0, 0, 0) 67%);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ============== SIDEBAR ============== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div class="name">Nimbus</div>
+      </div>
+
+      <nav class="nav-list">
+        <div class="nav-group-label">Workspace</div>
+        <div class="nav-item active"><span class="dot"></span>Overview</div>
+        <div class="nav-item"><span class="dot"></span>Projects</div>
+        <div class="nav-item"><span class="dot"></span>Customers</div>
+        <div class="nav-item"><span class="dot"></span>Invoices</div>
+        <div class="nav-group-label" style="margin-top: 16px;">Settings</div>
+        <div class="nav-item"><span class="dot"></span>Team</div>
+        <div class="nav-item"><span class="dot"></span>Billing</div>
+        <div class="nav-item"><span class="dot"></span>Integrations</div>
+      </nav>
+
+      <div class="user-card">
+        <div class="avatar"></div>
+        <div class="meta">
+          <div class="name">Edo B.</div>
+          <div class="role">Workspace admin</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============== MAIN ============== -->
+    <main class="main">
+      <div class="topbar">
+        <h1>Overview</h1>
+        <div class="actions">
+          <a class="btn btn-ghost">Export CSV</a>
+          <a class="btn btn-primary">+ New project</a>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="label">Active users</div>
+          <div class="value">12,486</div>
+          <div class="trend trend-up">+ 8.4% vs last week</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Monthly recurring revenue</div>
+          <div class="value">$84,210</div>
+          <div class="trend trend-up">+ 12.1% vs last month</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Churn</div>
+          <div class="value">2.1%</div>
+          <div class="trend trend-down">- 0.4 pts</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Open tickets</div>
+          <div class="value">37</div>
+          <div class="trend trend-flat">No change</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel panel-wide">
+          <div class="panel-title">Revenue, last 90 days</div>
+          <div class="panel-sub">Smoothed curve of daily revenue.</div>
+          <div class="chart">
+            <div class="chart-grid"></div>
+            <div class="chart-line"></div>
+          </div>
+        </div>
+
+        <div class="panel panel-narrow">
+          <div class="panel-title">Recent activity</div>
+          <div class="panel-sub">Latest events in the workspace.</div>
+          <div class="activity">
+            <div class="activity-row">
+              <div class="activity-avatar av-a"></div>
+              <div class="activity-body">
+                <div class="text"><strong>Maya O.</strong> closed deal <strong>Lattice Health</strong> ($12k).</div>
+                <div class="time">2 minutes ago</div>
+              </div>
+            </div>
+            <div class="activity-row">
+              <div class="activity-avatar av-b"></div>
+              <div class="activity-body">
+                <div class="text"><strong>Pavel R.</strong> deployed <strong>v2.0.1</strong> to production.</div>
+                <div class="time">18 minutes ago</div>
+              </div>
+            </div>
+            <div class="activity-row">
+              <div class="activity-avatar av-c"></div>
+              <div class="activity-body">
+                <div class="text"><strong>Sasha L.</strong> requested approval on <strong>SOC2 renewal</strong>.</div>
+                <div class="time">1 hour ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
