@@ -9,7 +9,7 @@ import type {
 } from '../types/ir'
 
 import { parseColor } from './color'
-import { parseGradient } from './gradient'
+import { parseGradients } from './gradient'
 import { parseBoxShadow } from './shadow'
 
 export function extractFills(cs: CSSStyleDeclaration): IRFill[] {
@@ -21,13 +21,15 @@ export function extractFills(cs: CSSStyleDeclaration): IRFill[] {
   }
 
   // Gradients live on top of background-color (CSS painting order).
-  // Figma fills are bottom-to-top in array order, so we push gradient
-  // after solid to layer correctly.
+  // Figma fills are bottom-to-top in array order, so the LAST element
+  // in fills is the topmost layer. CSS multi-background is the inverse:
+  // the FIRST listed gradient sits on top. So we iterate CSS gradients
+  // in reverse so the top CSS layer ends up last in the Figma fills.
   const bgImage = cs.backgroundImage
   if (bgImage && bgImage !== 'none') {
-    const gradient = parseGradient(bgImage)
-    if (gradient !== null) {
-      fills.push({ type: 'gradient', gradient })
+    const gradients = parseGradients(bgImage)
+    for (let i = gradients.length - 1; i >= 0; i--) {
+      fills.push({ type: 'gradient', gradient: gradients[i] })
     }
   }
 

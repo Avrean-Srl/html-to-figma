@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseGradient } from '../../src/parser/gradient'
+import { parseGradient, parseGradients } from '../../src/parser/gradient'
 
 describe('parseGradient', () => {
   it('returns null for none and unrelated values', () => {
@@ -72,5 +72,52 @@ describe('parseGradient', () => {
   it('returns null for malformed gradients', () => {
     expect(parseGradient('linear-gradient(red)')).toBeNull()
     expect(parseGradient('linear-gradient()')).toBeNull()
+  })
+})
+
+describe('parseGradients (multi-background)', () => {
+  it('returns empty array for none, url, and empty input', () => {
+    expect(parseGradients('none')).toEqual([])
+    expect(parseGradients('')).toEqual([])
+    expect(parseGradients('url(foo.png)')).toEqual([])
+  })
+
+  it('wraps a single gradient in a length-1 array', () => {
+    const out = parseGradients('linear-gradient(red, blue)')
+    expect(out).toHaveLength(1)
+    expect(out[0].kind).toBe('linear')
+  })
+
+  it('parses three stacked backgrounds in source order', () => {
+    // Mirrors the saas-landing hero-bg value Chrome returns from
+    // getComputedStyle.
+    const value =
+      'radial-gradient(circle at 30% 20%, rgba(124, 58, 237, 0.18), transparent 60%), ' +
+      'radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.15), transparent 55%), ' +
+      'linear-gradient(180deg, rgb(250, 251, 255) 0%, rgb(255, 255, 255) 100%)'
+    const out = parseGradients(value)
+    expect(out).toHaveLength(3)
+    expect(out[0].kind).toBe('radial')
+    expect(out[1].kind).toBe('radial')
+    expect(out[2].kind).toBe('linear')
+    expect(out[2].angle).toBe(180)
+    // The first radial must have a real pink first stop, not the
+    // corrupt black fallback the old single-gradient regex produced.
+    expect(out[0].stops[0].color.r).toBeCloseTo(124 / 255, 2)
+    expect(out[0].stops[0].color.g).toBeCloseTo(58 / 255, 2)
+    expect(out[0].stops[0].color.b).toBeCloseTo(237 / 255, 2)
+    expect(out[0].stops[0].color.a).toBeCloseTo(0.18, 2)
+    // Its second stop should be transparent at position 0.6.
+    expect(out[0].stops[1].color.a).toBeCloseTo(0, 2)
+    expect(out[0].stops[1].position).toBeCloseTo(0.6, 2)
+  })
+
+  it('skips non-gradient layers (url images) and returns only gradients', () => {
+    const value =
+      'url("foo.png"), linear-gradient(90deg, red, blue)'
+    const out = parseGradients(value)
+    expect(out).toHaveLength(1)
+    expect(out[0].kind).toBe('linear')
+    expect(out[0].angle).toBe(90)
   })
 })

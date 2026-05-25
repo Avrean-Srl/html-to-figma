@@ -11,6 +11,13 @@ import { parseColor } from './color'
 //   radial-gradient([<shape/size/position>,] <stop>, <stop>, ...)
 // Radial shape/size/position is currently dropped - gradient stays
 // centered with a farthest-corner extent approximation.
+//
+// IMPORTANT: this function expects a SINGLE gradient. CSS allows stacked
+// backgrounds via `background: gradient1, gradient2, ...`. For those
+// callers should use parseGradients() to split first, otherwise the
+// greedy `.+` regex eats across gradient boundaries and produces a
+// garbage stop list (e.g. opaque-black stops from broken `transparent X%)`
+// tokens that include the unmatched paren).
 export function parseGradient(value: string): IRGradient | null {
   if (!value || value === 'none') return null
 
@@ -25,6 +32,21 @@ export function parseGradient(value: string): IRGradient | null {
   if (radial !== null) return parseRadial(radial[1])
 
   return null
+}
+
+// Parses a CSS `background-image` value that may carry multiple
+// comma-separated layers (one or more gradients, possibly mixed with
+// url() entries we silently drop). Returns gradients in source order:
+// element 0 is the topmost CSS layer.
+export function parseGradients(value: string): IRGradient[] {
+  if (!value || value === 'none') return []
+  const layers = splitTopLevelCommas(value).map((p) => p.trim()).filter((p) => p.length > 0)
+  const out: IRGradient[] = []
+  for (const layer of layers) {
+    const g = parseGradient(layer)
+    if (g !== null) out.push(g)
+  }
+  return out
 }
 
 function parseLinear(args: string): IRGradient | null {
