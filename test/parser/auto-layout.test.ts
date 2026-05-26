@@ -25,8 +25,18 @@ describe('extractAutoLayout', () => {
     expect(extractAutoLayout(getComputedStyle(el))).toBeNull()
   })
 
-  it('returns null for display: grid (Figma has no grid native)', () => {
-    const el = styled('display: grid')
+  it('returns null for display: grid (browser positions are kept absolute)', () => {
+    // Earlier iterations tried to map grid -> Figma Auto Layout, but
+    // that reflowed multi-row card grids onto a single line and broke
+    // ::before pseudos inside grid items. We now trust the browser
+    // measured rects for any grid layout: each child lands at its
+    // pixel position in its parent without auto-layout.
+    const el = styled('display: grid; grid-template-columns: auto 1fr')
+    expect(extractAutoLayout(getComputedStyle(el))).toBeNull()
+  })
+
+  it('returns null for any grid template (uniform, fr-fr, etc.)', () => {
+    const el = styled('display: grid; grid-template-columns: 1fr 1fr 1fr')
     expect(extractAutoLayout(getComputedStyle(el))).toBeNull()
   })
 

@@ -188,7 +188,8 @@ describe('mapper effects, stroke, blendMode', () => {
   it('applies a uniform border as INSIDE stroke', async () => {
     const stroke: IRStroke = {
       width: 2,
-      color: { r: 1, g: 0, b: 0, a: 1 }
+      color: { r: 1, g: 0, b: 0, a: 1 },
+      style: 'solid'
     }
     const doc = makeDoc(frame({ stroke }))
     const result = await materializeIR(doc)
@@ -196,6 +197,30 @@ describe('mapper effects, stroke, blendMode', () => {
     expect(result.root.strokes).toHaveLength(1)
     expect(result.root.strokeWeight).toBe(2)
     expect(result.root.strokeAlign).toBe('INSIDE')
+    expect(result.root.dashPattern).toEqual([])
+  })
+
+  it('translates a dashed border to a dashPattern', async () => {
+    const stroke: IRStroke = {
+      width: 1,
+      color: { r: 0, g: 0, b: 0, a: 1 },
+      style: 'dashed'
+    }
+    const doc = makeDoc(frame({ stroke }))
+    const result = await materializeIR(doc)
+    expect(result.root.dashPattern).toEqual([8, 4])
+  })
+
+  it('translates a dotted border to a stroke-width-scaled dashPattern', async () => {
+    const stroke: IRStroke = {
+      width: 2,
+      color: { r: 0, g: 0, b: 0, a: 1 },
+      style: 'dotted'
+    }
+    const doc = makeDoc(frame({ stroke }))
+    const result = await materializeIR(doc)
+    expect(result.root.dashPattern).toEqual([2, 4])
+    expect(result.root.strokeCap).toBe('ROUND')
   })
 
   it('skips blendMode assignment for normal (preserves Figma default)', async () => {

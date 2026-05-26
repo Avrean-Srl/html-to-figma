@@ -25,6 +25,18 @@ export interface ImportDocumentHandler extends EventHandler {
   handler: (document: IRDocument) => void
 }
 
+// UI -> main: a batch of parsed IRs (one per HTML page in a multi-page
+// ZIP). Main lays them out as side-by-side frames so the user gets the
+// whole mockup in one shot.
+export interface ImportDocumentsHandler extends EventHandler {
+  name: 'IMPORT_DOCUMENTS'
+  handler: (payload: ImportDocumentsPayload) => void
+}
+
+export interface ImportDocumentsPayload {
+  pages: Array<{ name: string; doc: IRDocument }>
+}
+
 // main -> UI: progress update during materialization. Phase 5+ for large docs.
 export interface ImportProgressHandler extends EventHandler {
   name: 'IMPORT_PROGRESS'
@@ -32,9 +44,13 @@ export interface ImportProgressHandler extends EventHandler {
 }
 
 export interface ImportProgress {
-  stage: 'fonts' | 'nodes' | 'images' | 'effects' | 'done'
+  stage: 'fonts' | 'nodes' | 'images' | 'effects' | 'done' | 'parsing'
   current: number
   total: number
+  // Set during a multi-page ZIP import so the UI can show "Page 3/13".
+  pageIndex?: number
+  pageCount?: number
+  pageName?: string
 }
 
 // main -> UI: import finished, summary for the post-import report. Phase 1+.

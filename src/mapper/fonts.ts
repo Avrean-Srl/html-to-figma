@@ -38,9 +38,14 @@ export function refKey(ref: IRFontRef): string {
 //   2. requested family + Regular
 //   3. Inter + computed style
 //   4. Inter Regular
+// Indexes a loaded set of fonts by `${family}|${style}` and exposes
+// FontName lookups for the runtime mapping. resolveAndLoadFonts both
+// loads and returns this map; resolveFont reads it.
+export type FontMap = Map<string, FontName>
+
 export async function resolveAndLoadFonts(
   refs: ReadonlyArray<IRFontRef>
-): Promise<Map<string, FontName>> {
+): Promise<FontMap> {
   const available = await figma.listAvailableFontsAsync()
   const availableSet = new Set(
     available.map((f) => `${f.fontName.family}|${f.fontName.style}`)

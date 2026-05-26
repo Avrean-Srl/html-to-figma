@@ -1,5 +1,7 @@
 import type { IRDocument, IRImage, IRImageFailure, IRNode } from '../types/ir'
 
+import { isGoogleMapsUrl, resolveGoogleMapsToImage } from './map-resolver'
+
 // After the synchronous walker pass we have IRImage nodes with bytes=null
 // and loadStatus='pending' for any non-data-url image and loadStatus
 // 'data-url' for inline data URLs. This pass fills bytes in by decoding
@@ -26,6 +28,27 @@ export async function loadImages(doc: IRDocument): Promise<void> {
       return
     }
     if (ir.loadStatus !== 'pending') return
+
+    // Google Maps iframe URL? Geocode (Nominatim, OSM, free) and
+    // grab a PNG from staticmap.openstreetmap.de instead of fetching
+    // the URL directly (which would CORS-fail). The result feeds the
+    // same Figma image fill path as a regular `<img src>` import.
+    if (isGoogleMapsUrl(ir.sourceUrl)) {
+      const map = await resolveGoogleMapsToImage(
+        ir.sourceUrl,
+        ir.layout.width,
+        ir.layout.height
+      )
+      if (map !== null && isSupportedImageFormat(map.bytes)) {
+        ir.bytes = map.bytes
+        ir.loadStatus = 'ok'
+        return
+      }
+      ir.bytes = null
+      ir.loadStatus = 'network-error'
+      return
+    }
+
     const fetched = await fetchImageBytes(ir.sourceUrl)
     if (fetched.kind !== 'ok') {
       ir.bytes = null

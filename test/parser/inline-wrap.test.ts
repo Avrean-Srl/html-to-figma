@@ -26,39 +26,11 @@ function findFrameByTag(
   return null
 }
 
-describe('inline text wrapping splits into one IRText per line', () => {
-  it('a loose text node wrapping to two lines produces two IRText nodes', async () => {
-    // Narrow container forces "to production." to wrap below "v2.0.1".
-    const html = `
-      <style>
-        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; font-size: 14px; }
-        .box { width: 220px; padding: 8px; }
-      </style>
-      <div class="box"><strong>Pavel R.</strong> deployed <strong>v2.0.1</strong> to production.</div>
-    `
-    const ir = await parseHtmlToIR(html, { viewportWidth: 1440 })
-    const box = findFrameByTag(ir.root, 'div')
-    expect(box).not.toBeNull()
-
-    const texts = findAllTexts(box as IRFrame)
-    const tail = texts.filter((t) => t.characters.includes('production'))
-    // Either one IRText with characters "to production." that lives on a
-    // single visual line, OR if it wrapped, two IRText nodes with
-    // non-overlapping bounding rects.
-    expect(tail.length).toBeGreaterThanOrEqual(1)
-    // No text run should be more than ~2 line-heights tall — the bug was
-    // a single tall node spanning both lines.
-    for (const t of tail) {
-      expect(t.layout.height).toBeLessThan(40)
-    }
-  })
-
-  it('preserves whitespace between inline runs (no "Pavel R.deployed" smushing)', async () => {
-    // The text node " deployed " (with leading + trailing spaces) sits
-    // between two <strong> elements. The walker must keep those spaces
-    // in the IRText characters, otherwise Figma renders "Pavel R."
-    // immediately adjacent to "deployed" with no visible gap because
-    // the layout rect was sized to include the spaces.
+describe('inline-phrase merge produces one TextNode with ranges', () => {
+  it('merges <strong> + text + <strong> into a single IRText carrying the whole sentence', async () => {
+    // Used to splinter into multiple IRTexts when the paragraph mixed
+    // inline elements with bare text. Now: one merged text with
+    // character-range styling for the bolded runs.
     const html = `
       <style>
         body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; font-size: 14px; }
@@ -70,16 +42,91 @@ describe('inline text wrapping splits into one IRText per line', () => {
     const box = findFrameByTag(ir.root, 'div')
     expect(box).not.toBeNull()
     const texts = findAllTexts(box as IRFrame)
-
-    const deployed = texts.find((t) => t.characters.includes('deployed'))
-    const toProduction = texts.find((t) => t.characters.includes('production'))
-
-    expect(deployed?.characters).toMatch(/^\s/)
-    expect(deployed?.characters).toMatch(/\s$/)
-    expect(toProduction?.characters).toMatch(/^\s/)
+    expect(texts).toHaveLength(1)
+    const merged = texts[0]
+    // Single space between the runs (CSS collapses the source whitespace).
+    expect(merged.characters).toBe(
+      'Pavel R. deployed v2.0.1 to production.'
+    )
+    // The two <strong> runs surface as bold ranges (weight >= 600).
+    expect(merged.ranges).toBeDefined()
+    const boldRanges = (merged.ranges ?? []).filter(
+      (r) => (r.fontWeight ?? 400) >= 600
+    )
+    expect(boldRanges.length).toBeGreaterThanOrEqual(2)
+    const slices = boldRanges.map((r) => merged.characters.slice(r.start, r.end))
+    expect(slices).toContain('Pavel R.')
+    expect(slices).toContain('v2.0.1')
   })
 
-  it('all inline runs in a wrapping paragraph have non-overlapping y bands', async () => {
+  it('does NOT merge nav links inside a flex container', async () => {
+    // Regression: `<nav style="display:flex">` with `<a>` links was
+    // collapsing into a single text "CatalogoServiziAziendaContatti"
+    // because every <a> is an inline-phrase tag. Flex containers must
+    // keep their children as distinct visual items.
+    const html = `
+      <style>
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; font-size: 14px; }
+      </style>
+      <nav style="display: flex; gap: 12px">
+        <a href="#">Catalogo</a>
+        <a href="#">Servizi</a>
+        <a href="#">Azienda</a>
+        <a href="#">Contatti</a>
+      </nav>
+    `
+    const ir = await parseHtmlToIR(html, { viewportWidth: 1440 })
+    const nav = findFrameByTag(ir.root, 'nav')
+    expect(nav).not.toBeNull()
+    if (nav) {
+      const texts = findAllTexts(nav)
+      // Each link keeps its own IRText.
+      const labels = texts.map((t) => t.characters)
+      expect(labels).toContain('Catalogo')
+      expect(labels).toContain('Servizi')
+      expect(labels).toContain('Azienda')
+      expect(labels).toContain('Contatti')
+      // No glued-together blob.
+      expect(labels.every((l) => !l.includes('CatalogoServizi'))).toBe(true)
+    }
+  })
+
+  it('does NOT merge inside a CSS Grid container', async () => {
+    const html = `
+      <style> .row { display: grid; grid-template-columns: auto 1fr; gap: 12px; } </style>
+      <div class="row">
+        <span>Label</span>
+        <span>Value</span>
+      </div>
+    `
+    const ir = await parseHtmlToIR(html, { viewportWidth: 1440 })
+    const row = findFrameByTag(ir.root, 'div')
+    if (row) {
+      const labels = findAllTexts(row).map((t) => t.characters)
+      expect(labels).toContain('Label')
+      expect(labels).toContain('Value')
+    }
+  })
+
+  it('respects the line height of the parent regardless of wrap width', async () => {
+    // Regression: the merged IRText should still measure ONE line
+    // height, not collapse into a sliver. Narrow containers wrap
+    // internally inside Figma's text node.
+    const html = `
+      <style>
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; font-size: 14px; line-height: 22px; }
+        .box { width: 220px; padding: 8px; }
+      </style>
+      <div class="box"><strong>Pavel R.</strong> deployed <strong>v2.0.1</strong> to production.</div>
+    `
+    const ir = await parseHtmlToIR(html, { viewportWidth: 1440 })
+    const box = findFrameByTag(ir.root, 'div')
+    const texts = findAllTexts(box as IRFrame)
+    expect(texts).toHaveLength(1)
+    expect(texts[0].lineHeight).toBeGreaterThanOrEqual(20)
+  })
+
+  it('a paragraph with inline phrases lands as a single merged text node', async () => {
     const html = `
       <style>
         body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; font-size: 14px; }
@@ -90,26 +137,15 @@ describe('inline text wrapping splits into one IRText per line', () => {
     const ir = await parseHtmlToIR(html, { viewportWidth: 1440 })
     const box = findFrameByTag(ir.root, 'div')
     expect(box).not.toBeNull()
-
     const texts = findAllTexts(box as IRFrame)
-    // Sort by y, then for each pair of adjacent nodes that share an
-    // overlapping y band, x ranges must NOT overlap (siblings on same
-    // line must not overlap horizontally).
-    const sorted = [...texts].sort((a, b) => a.layout.y - b.layout.y)
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const a = sorted[i]
-      const b = sorted[i + 1]
-      const aMidY = a.layout.y + a.layout.height / 2
-      const bMidY = b.layout.y + b.layout.height / 2
-      const sameLine = Math.abs(aMidY - bMidY) < a.layout.height / 2
-      if (!sameLine) continue
-      const aRight = a.layout.x + a.layout.width
-      const bRight = b.layout.x + b.layout.width
-      const horizontalOverlap = !(aRight <= b.layout.x || bRight <= a.layout.x)
-      expect(
-        horizontalOverlap,
-        `runs "${a.characters}" and "${b.characters}" overlap on the same line`
-      ).toBe(false)
-    }
+    expect(texts).toHaveLength(1)
+    expect(texts[0].characters).toContain('Sasha L.')
+    expect(texts[0].characters).toContain('SOC2 renewal')
+    // Bold range markers preserved on the merged text.
+    const boldSlices = (texts[0].ranges ?? [])
+      .filter((r) => (r.fontWeight ?? 400) >= 600)
+      .map((r) => texts[0].characters.slice(r.start, r.end))
+    expect(boldSlices).toContain('Sasha L.')
+    expect(boldSlices).toContain('SOC2 renewal')
   })
 })

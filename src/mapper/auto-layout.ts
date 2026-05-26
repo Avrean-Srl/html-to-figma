@@ -30,8 +30,14 @@ export function applyAutoLayout(
 
   frame.layoutMode = ir.direction === 'horizontal' ? 'HORIZONTAL' : 'VERTICAL'
 
-  frame.primaryAxisSizingMode = 'FIXED'
-  frame.counterAxisSizingMode = 'FIXED'
+  // Sizing modes come from the IR hint (defaults to 'fixed' so existing
+  // tests / fixtures keep their pixel-perfect behavior). 'hug' maps to
+  // AUTO, which makes Figma reflow the frame to its content + padding -
+  // the right call for inline-flex chips, content-sized buttons, etc.
+  frame.primaryAxisSizingMode =
+    ir.primaryAxisSizing === 'hug' ? 'AUTO' : 'FIXED'
+  frame.counterAxisSizingMode =
+    ir.counterAxisSizing === 'hug' ? 'AUTO' : 'FIXED'
 
   frame.itemSpacing = ir.gap
 
@@ -45,7 +51,14 @@ export function applyAutoLayout(
 
   frame.layoutWrap = ir.wrap ? 'WRAP' : 'NO_WRAP'
 
-  if (frame.width !== targetWidth || frame.height !== targetHeight) {
+  // Only resize back to the measured rectangle when both axes are
+  // FIXED. For HUG axes we WANT Figma to size to content; forcing a
+  // resize would undo the hug behavior on the next layout pass.
+  if (
+    ir.primaryAxisSizing !== 'hug' &&
+    ir.counterAxisSizing !== 'hug' &&
+    (frame.width !== targetWidth || frame.height !== targetHeight)
+  ) {
     frame.resize(Math.max(targetWidth, 0.01), Math.max(targetHeight, 0.01))
   }
 }

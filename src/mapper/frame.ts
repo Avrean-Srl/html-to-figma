@@ -51,6 +51,20 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
     // INSIDE matches box-sizing: border-box visually - the border lives
     // within the frame box rather than extending it.
     frame.strokeAlign = 'INSIDE'
+    // Map CSS border-style to Figma's dashPattern. The numbers below
+    // are the same defaults the Figma UI ships in its stroke style
+    // picker - dashed ≈ "8px on, 4px off", dotted ≈ square dots whose
+    // size scales with stroke weight so 1px borders stay legible.
+    if (ir.stroke.style === 'dashed') {
+      frame.dashPattern = [8, 4]
+    } else if (ir.stroke.style === 'dotted') {
+      const dot = Math.max(ir.stroke.width, 1)
+      frame.dashPattern = [dot, dot * 2]
+      // Round dash ends so dots look like dots, not tiny rectangles.
+      frame.strokeCap = 'ROUND'
+    } else {
+      frame.dashPattern = []
+    }
   }
 
   // Only override the default frame blendMode ('PASS_THROUGH') when the

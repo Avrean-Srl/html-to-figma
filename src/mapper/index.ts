@@ -127,6 +127,14 @@ export async function materializeIR(
       ownHasAutoLayout
         ? ir.children
         : [...ir.children].sort((a, b) => a.zIndex - b.zIndex)
+
+    // First pass: append children + apply child-side layout props that
+    // are SAFE to set before the parent's layoutMode is configured
+    // (layoutGrow, layoutAlign, constraints all tolerate layoutMode =
+    // NONE). We deliberately defer layoutPositioning to the second
+    // pass below, because Figma rejects layoutPositioning='ABSOLUTE'
+    // unless the parent has Auto Layout enabled.
+    const appended: Array<{ child: IRNode; node: FrameNode | TextNode }> = []
     for (const child of orderedChildren) {
       const node = buildNode(
         child,
@@ -134,13 +142,49 @@ export async function materializeIR(
         ir.layout.y,
         ownHasAutoLayout
       )
-      if (node !== null) frame.appendChild(node)
+      if (node === null) continue
+      frame.appendChild(node)
+      const grow = child.layoutGrow ?? 0
+      if (grow > 0 && 'layoutGrow' in node) {
+        ;(node as FrameNode | TextNode).layoutGrow = grow
+      }
+      const align = child.layoutAlign
+      if (align === 'STRETCH' && 'layoutAlign' in node) {
+        ;(node as FrameNode | TextNode).layoutAlign = 'STRETCH'
+      }
+      const stretch = child.constraintsStretch
+      if (stretch && 'constraints' in node) {
+        ;(node as FrameNode).constraints = {
+          horizontal: stretch.horizontal ? 'STRETCH' : 'MIN',
+          vertical: stretch.vertical ? 'STRETCH' : 'MIN'
+        }
+      }
+      appended.push({ child, node: node as FrameNode | TextNode })
     }
 
     // Apply Auto Layout AFTER all children are attached so Figma can
     // reflow with the full child list in one pass.
     if (ir.autoLayout !== null) {
       applyAutoLayout(frame, ir.autoLayout)
+    }
+
+    // Second pass: now that layoutMode is set, opt absolute children
+    // out of the auto-layout flow. Figma requires the parent to be in
+    // Auto Layout before accepting layoutPositioning='ABSOLUTE' -
+    // setting it earlier raised a figma-api-error. After opting out we
+    // restore the measured x/y so the absolute child lands at its CSS
+    // position rather than at the auto-layout origin.
+    if (ownHasAutoLayout) {
+      for (const { child, node } of appended) {
+        if (
+          child.positioning === 'absolute' &&
+          'layoutPositioning' in node
+        ) {
+          ;(node as FrameNode | TextNode).layoutPositioning = 'ABSOLUTE'
+          node.x = child.layout.x - ir.layout.x
+          node.y = child.layout.y - ir.layout.y
+        }
+      }
     }
 
     return frame
@@ -157,7 +201,7 @@ export async function materializeIR(
       weight: ir.fontWeight,
       style: ir.fontStyle
     })
-    const node = createTextFromIR(ir, fontName)
+    const node = createTextFromIR(ir, fontName, fontMap)
     if (!parentHasAutoLayout) {
       node.x = ir.layout.x - parentX
       node.y = ir.layout.y - parentY

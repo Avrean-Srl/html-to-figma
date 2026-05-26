@@ -28,8 +28,17 @@ export interface MockNode {
   strokes?: unknown[]
   strokeWeight?: number
   strokeAlign?: 'INSIDE' | 'OUTSIDE' | 'CENTER'
+  dashPattern?: number[]
+  strokeCap?: 'NONE' | 'ROUND' | 'SQUARE' | 'ARROW_LINES' | 'ARROW_EQUILATERAL'
   // Auto Layout
   layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL'
+  layoutGrow?: number
+  layoutAlign?: 'INHERIT' | 'STRETCH' | 'MIN' | 'CENTER' | 'MAX'
+  layoutPositioning?: 'AUTO' | 'ABSOLUTE'
+  constraints?: {
+    horizontal: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
+    vertical: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
+  }
   primaryAxisSizingMode?: 'FIXED' | 'AUTO'
   counterAxisSizingMode?: 'FIXED' | 'AUTO'
   primaryAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN'

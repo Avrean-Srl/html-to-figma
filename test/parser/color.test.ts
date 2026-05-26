@@ -40,7 +40,22 @@ describe('parseColor', () => {
     expect(parseColor('')).toEqual({ r: 0, g: 0, b: 0, a: 0 })
   })
 
-  it('falls back to black for unrecognized input', () => {
-    expect(parseColor('not-a-color')).toEqual({ r: 0, g: 0, b: 0, a: 1 })
+  it('returns transparent (not opaque black) for unrecognized input', () => {
+    // Canvas silently keeps its previous fillStyle when given an
+    // invalid color. Old behavior read the leftover '#000000' as a
+    // real answer, which turned every CSS function the runtime did not
+    // recognize (e.g. oklch on older CEF, color-mix) into opaque
+    // black. Returning transparent instead keeps the failure
+    // visible-by-omission.
+    expect(parseColor('not-a-color')).toEqual({ r: 0, g: 0, b: 0, a: 0 })
+  })
+
+  it('returns transparent for a CSS color function the canvas refuses', () => {
+    // We can't force the canvas to reject a valid value in modern
+    // Chromium, but we can ask for a syntactically wrong color
+    // function. The test guarantees the sentinel-based detection
+    // path returns TRANSPARENT, not the sentinel value itself.
+    const result = parseColor('oklch(definitely not valid)')
+    expect(result.a).toBe(0)
   })
 })

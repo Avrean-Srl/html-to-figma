@@ -176,7 +176,10 @@ describe('walkDocument', () => {
     expect(result.root.children[0].type).toBe('text')
   })
 
-  it('captures loose text inside mixed-content elements via Range', () => {
+  it('merges <p>Hello <strong>world</strong></p> into one IRText with a bold range', () => {
+    // Inline-phrase merge: instead of fragmenting into separate texts
+    // for "Hello " and "world", we now keep the whole paragraph as ONE
+    // editable text layer with a character-range marking "world" bold.
     const container = setup('<p>Hello <strong>world</strong></p>')
     const result = walkDocument(container, 1440)
 
@@ -184,7 +187,16 @@ describe('walkDocument', () => {
     expect(para.type).toBe('frame')
     if (para.type === 'frame') {
       const texts = para.children.filter((c) => c.type === 'text')
-      expect(texts.length).toBeGreaterThanOrEqual(2)
+      expect(texts).toHaveLength(1)
+      if (texts[0].type === 'text') {
+        expect(texts[0].characters).toBe('Hello world')
+        const ranges = texts[0].ranges ?? []
+        const bold = ranges.find((r) => (r.fontWeight ?? 400) >= 600)
+        expect(bold).toBeDefined()
+        if (bold) {
+          expect(texts[0].characters.slice(bold.start, bold.end)).toBe('world')
+        }
+      }
     }
   })
 })

@@ -65,8 +65,8 @@ CORS-blocked, network-error, not-found, format-unsupported (PNG/JPEG/GIF only): 
 ### D6 - `src/bridge/*` deferred
 `emit<MyHandler>` / `on<MyHandler>` from `@create-figma-plugin/utilities` is already typed via `EventHandler` interfaces in `src/types/messages.ts`. Wrapping it adds files, not safety. Revisit if request/response correlation gets messy.
 
-### D7 - Render harness: offscreen `<div>`, not iframe srcdoc
-Tried iframe srcdoc first for full CSS isolation. Chromium has a load-event race (about:blank fires before srcdoc, `once: true` listener catches the wrong one). Container approach in `src/parser/render.ts` is robust and matches what the walker tests already use. Tradeoff: user `<style>` cascades to the plugin UI for ~100ms while the container is mounted. Acceptable. Upgrade path documented in code if real users hit pollution.
+### D7 - Render harness: iframe srcdoc (revised)
+Originally moved to an offscreen `<div>` to avoid an iframe load-event race (about:blank fires before srcdoc, `once: true` catches the wrong one). That worked for synthetic fixtures but broke real-world archives: `@media (min-width: 1024px)` was evaluated against the plugin window (~400 px), so desktop CSS never activated and pages laid out in mobile mode on a 1440-px canvas. The current `src/parser/render.ts` is an iframe sized to viewportWidth - the iframe is its own viewport, so media queries work. The race is dodged by attaching the load listener before setting `srcdoc` AND setting `srcdoc` before appending; the iframe is born with srcdoc as its source so the about:blank navigation never happens. Tests `render.test.ts` cover both 1440-activates-desktop and 320-keeps-mobile.
 
 ---
 
@@ -80,7 +80,8 @@ Tried iframe srcdoc first for full CSS isolation. Chromium has a load-event race
 - Borders/effects: border-radius (4 corners independent), uniform border (single SOLID stroke, INSIDE alignment), multi/inset box-shadow
 - Images: `<img>` with data URL or `https://` URL (fetch + CORS handling), magic-byte sniffing for format (PNG/JPEG/GIF only), object-fit (cover -> FILL, contain/scale-down -> FIT)
 - SVG: `<svg>` inline via `figma.createNodeFromSvg` (text in SVG becomes vector paths)
-- Input: paste HTML (Paste tab), drop `.html` / `.htm` file, drop `.zip` archive (auto-inlines image assets)
+- Input: paste HTML (Paste tab), drop `.html` / `.htm` file, drop `.zip` archive (auto-inlines external stylesheets, images, and CSS `url()` font/background refs; strips scripts; absolute http(s) URLs - e.g. Google Fonts - left alone so they keep loading)
+- Multi-page ZIP: every top-level `.html` in the archive becomes its own root frame in Figma, laid out side-by-side with a 100-px gap (index.html first, others alphabetical). Single-page ZIPs and `.html` drops keep the original single-frame behavior. Progress shows `Page 3/13 (catalogo.html) · …` during the batch.
 - UX: branded red banner header, viewport selector (320/768/1024/1440/1920 px), File/Paste tabs, persistent settings via `figma.clientStorage`, progress events every 25 nodes, styled status pill, failures card with scrollable list, GitHub footer
 
 ### Not supported (deferred)
@@ -95,7 +96,8 @@ Tried iframe srcdoc first for full CSS isolation. Chromium has a load-event race
 - Forms: `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>` (skipped)
 - Media: `<video>`, `<audio>`, `<canvas>`, `<iframe>` (skipped)
 - Hover/focus/active states (only the resting computed style is captured)
-- External `<link rel="stylesheet">` (blocked by iframe sandbox)
+- CSS `@import` is not resolved when inlining ZIP stylesheets (use direct `<link>` instead)
+- `srcset`, `<picture>`, `<source>`, and `url()` inside HTML `style="..."` attributes are not rewritten on ZIP import
 - Node-creation batching for >500-node docs (works but no `await` chunking; progress bar visible)
 
 ---

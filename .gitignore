@@ -14,3 +14,7 @@ code.js
 # Generated on build from package.json#figma-plugin
 # Source of truth for the plugin id is package.json
 manifest.json
+
+# Local-only test archives (drop your own real-world .zip here to dogfood)
+*.zip
+!test/fixtures/**/*.zip

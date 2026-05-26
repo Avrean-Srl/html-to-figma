@@ -14,6 +14,31 @@ export interface IRNodeBase {
   // CSS z-index. 'auto' becomes 0. Mapper sorts siblings ascending so
   // higher z-index ends up later in Figma's child list (= on top).
   zIndex: number
+  // CSS flex-grow on a child of a flex container. Maps to Figma's
+  // FrameNode.layoutGrow (1 = stretches along parent's primary axis,
+  // 0 = stays at intrinsic size). Only meaningful when the parent has
+  // autoLayout != null. Optional - defaults to 0 in the mapper if
+  // missing, which keeps every existing IR fixture / test compatible.
+  layoutGrow?: number
+  // Cross-axis fill behavior for a child of a flex container. Maps to
+  // Figma's layoutAlign: 'STRETCH' tells the child to fill the parent's
+  // counter axis (e.g. sidebar links spanning the full sidebar width).
+  // Translated from CSS `align-self: stretch` (or parent
+  // `align-items: stretch` + child has no explicit cross-axis size).
+  // Defaults to 'INHERIT' when missing.
+  layoutAlign?: 'INHERIT' | 'STRETCH'
+  // CSS position: 'absolute' / 'fixed' on a child of an Auto Layout
+  // parent. Maps to Figma's layoutPositioning='ABSOLUTE' so the child
+  // is taken OUT of the auto-layout flow and lands at its measured
+  // x/y instead of being packed by the parent's primaryAxis order.
+  // Defaults to 'auto'.
+  positioning?: 'auto' | 'absolute'
+  // For absolute children that should fill their containing block
+  // (CSS `inset: 0` / `top:0; right:0; bottom:0; left:0`), apply
+  // Figma's "stretch" constraints on both axes so the child resizes
+  // with the parent. Without this, the inset-0 pseudo stays at a
+  // fixed measured size and overflows when the parent grows.
+  constraintsStretch?: { horizontal: boolean; vertical: boolean }
 }
 
 // Matches CSS mix-blend-mode names. 1:1 mapping to Figma BlendMode
@@ -71,7 +96,18 @@ export interface IRShadow {
 export interface IRStroke {
   color: IRColor
   width: number
+  // CSS border-style. Maps to Figma's dashPattern: solid -> [],
+  // dashed -> [8, 4], dotted -> [stroke-width, stroke-width].
+  style: 'solid' | 'dashed' | 'dotted'
 }
+
+// Sizing hint a flex container declares for its own axes. Used by the
+// mapper to pick primaryAxisSizingMode / counterAxisSizingMode:
+//   - 'fixed': preserve the iframe-measured dimension (default for
+//     block-level flex, where CSS gives the container a defined width)
+//   - 'hug':   shrink to children + gap + padding. Right for
+//     `display: inline-flex` and content-sized chips/buttons.
+export type IRSizingHint = 'fixed' | 'hug'
 
 export interface IRText extends IRNodeBase {
   type: 'text'
@@ -85,6 +121,23 @@ export interface IRText extends IRNodeBase {
   lineHeight: number
   textAlign: 'left' | 'right' | 'center' | 'justify'
   textDecoration: 'none' | 'underline' | 'line-through'
+  // Per-character style overrides for inline-phrase children (strong,
+  // em, b, i, mark, etc.). When set, the mapper calls
+  // setRangeFontName / setRangeFills / setRangeTextDecoration on the
+  // Figma TextNode so a single sentence with embedded bold / italic
+  // / colored runs lands as ONE text layer instead of getting
+  // fragmented into separate Figma frames.
+  ranges?: IRTextRange[]
+}
+
+export interface IRTextRange {
+  // Half-open character interval [start, end) in IRText.characters.
+  start: number
+  end: number
+  fontWeight?: number
+  fontStyle?: 'normal' | 'italic' | 'oblique'
+  color?: IRColor
+  textDecoration?: 'none' | 'underline' | 'line-through'
 }
 
 export interface IRImage extends IRNodeBase {
@@ -146,6 +199,12 @@ export interface IRAutoLayout {
   primaryAxisAlign: 'min' | 'center' | 'max' | 'space-between'
   counterAxisAlign: 'min' | 'center' | 'max'
   wrap: boolean
+  // How the container itself sizes along each axis. Defaults to 'fixed'
+  // on both (= pin to measured rect), but `display: inline-flex` and a
+  // few other CSS shapes legitimately want 'hug'. Optional so existing
+  // IR fixtures still parse.
+  primaryAxisSizing?: IRSizingHint
+  counterAxisSizing?: IRSizingHint
 }
 
 export type ImageLoadStatus =

@@ -49,6 +49,30 @@ describe('extractStroke', () => {
     const el = styled('width: 100px; height: 50px; border: 2px none red')
     expect(extractStroke(getComputedStyle(el))).toBeNull()
   })
+
+  it('captures dashed border style', () => {
+    const el = styled(
+      'width: 100px; height: 50px; border: 2px dashed rgb(0, 0, 0)'
+    )
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke?.style).toBe('dashed')
+  })
+
+  it('captures dotted border style', () => {
+    const el = styled(
+      'width: 100px; height: 50px; border: 2px dotted rgb(0, 0, 0)'
+    )
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke?.style).toBe('dotted')
+  })
+
+  it('defaults to solid for unsupported border styles (groove, ridge, double)', () => {
+    const el = styled(
+      'width: 100px; height: 50px; border: 4px double rgb(0, 0, 0)'
+    )
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke?.style).toBe('solid')
+  })
 })
 
 describe('extractBlendMode', () => {

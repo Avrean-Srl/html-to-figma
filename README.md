@@ -21,7 +21,7 @@ The imported tree appears at the center of your viewport and is selected, so you
 
 Images: `<img>` with `data:` URLs or `https://` URLs (PNG / JPEG / GIF). CORS-blocked, 404, or unsupported-format URLs land in a failure list in the plugin UI with a grey placeholder in the canvas, so the layout survives.
 
-ZIP archives: drop a `.zip` containing an `index.html` plus image assets. Relative `<img src="...">` paths are resolved against the archive and inlined automatically.
+ZIP archives: drop a `.zip` containing one or more HTMLs plus their assets. The plugin inlines every relative `<link rel="stylesheet">`, `<img src>`, and CSS `url()` font/background so the imported pages render the way they do in the browser. Absolute URLs like Google Fonts are left untouched and keep loading from the network. Multi-page archives import every top-level HTML as a separate root frame, laid out side-by-side (index.html first, others alphabetical).
 
 ## Development
 

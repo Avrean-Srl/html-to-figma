@@ -15,11 +15,12 @@ import { Fragment, h } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
 
 import { parseHtmlToIR } from './parser'
-import { extractHtmlFromZip } from './parser/zip'
+import { extractHtmlsFromZip, type ZipPage } from './parser/zip'
 import type { IRImageFailure } from './types/ir'
 import type {
   ImportCompleteHandler,
   ImportDocumentHandler,
+  ImportDocumentsHandler,
   ImportErrorHandler,
   ImportProgress,
   ImportProgressHandler,
@@ -53,11 +54,13 @@ function Plugin() {
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [imageFailures, setImageFailures] = useState<IRImageFailure[]>([])
   const [, setBridgeOk] = useState<boolean>(false)
+  const [pluginVersion, setPluginVersion] = useState<string>('—')
   const settingsHydrated = useRef<boolean>(false)
 
   useEffect(() => {
-    const unsubPong = on<PongHandler>('PONG', (_data: PongPayload) => {
+    const unsubPong = on<PongHandler>('PONG', (data: PongPayload) => {
       setBridgeOk(true)
+      setPluginVersion(data.version)
     })
     const unsubSettings = on<SettingsLoadedHandler>(
       'SETTINGS_LOADED',
@@ -106,24 +109,7 @@ function Plugin() {
     setImageFailures([])
   }
 
-  async function readSelectedFileToHtml(file: File): Promise<string> {
-    const lower = file.name.toLowerCase()
-    if (lower.endsWith('.zip')) {
-      return extractHtmlFromZip(file)
-    }
-    if (
-      lower.endsWith('.html') ||
-      lower.endsWith('.htm') ||
-      file.type === 'text/html'
-    ) {
-      return file.text()
-    }
-    throw new Error(
-      'Unsupported file type. Drop a .html, .htm, or .zip file.'
-    )
-  }
-
-  async function runImport(htmlString: string): Promise<void> {
+  async function runImportFromHtml(htmlString: string): Promise<void> {
     setStatus('parsing')
     setStatusDetail('')
     setImageFailures([])
@@ -140,11 +126,73 @@ function Plugin() {
     }
   }
 
+  // Parse every top-level HTML in the ZIP into its own IR, then send the
+  // batch to the main thread for side-by-side materialization. We surface
+  // parse progress as a synthetic stage so a 13-page archive doesn't look
+  // frozen while pages 2..13 are still being measured.
+  async function runImportFromZipPages(pages: ZipPage[]): Promise<void> {
+    setStatus('parsing')
+    setStatusDetail('')
+    setImageFailures([])
+    setProgress({
+      stage: 'parsing',
+      current: 0,
+      total: pages.length,
+      pageCount: pages.length
+    })
+    try {
+      const irs: Array<{ name: string; doc: Awaited<ReturnType<typeof parseHtmlToIR>> }> = []
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i]
+        setProgress({
+          stage: 'parsing',
+          current: i,
+          total: pages.length,
+          pageIndex: i,
+          pageCount: pages.length,
+          pageName: page.name
+        })
+        const doc = await parseHtmlToIR(page.html, {
+          viewportWidth: Number(viewportWidth)
+        })
+        irs.push({ name: page.name, doc })
+      }
+      setStatus('importing')
+      emit<ImportDocumentsHandler>('IMPORT_DOCUMENTS', { pages: irs })
+    } catch (err) {
+      setStatus('error')
+      setStatusDetail(err instanceof Error ? err.message : String(err))
+    }
+  }
+
   async function handleImportFromFile(): Promise<void> {
     if (!selectedFile) return
+    const lower = selectedFile.name.toLowerCase()
     try {
-      const htmlString = await readSelectedFileToHtml(selectedFile)
-      await runImport(htmlString)
+      if (lower.endsWith('.zip')) {
+        const pages = await extractHtmlsFromZip(selectedFile)
+        if (pages.length === 0) {
+          throw new Error('No .html file found in the ZIP.')
+        }
+        if (pages.length === 1) {
+          await runImportFromHtml(pages[0].html)
+        } else {
+          await runImportFromZipPages(pages)
+        }
+        return
+      }
+      if (
+        lower.endsWith('.html') ||
+        lower.endsWith('.htm') ||
+        selectedFile.type === 'text/html'
+      ) {
+        const text = await selectedFile.text()
+        await runImportFromHtml(text)
+        return
+      }
+      throw new Error(
+        'Unsupported file type. Drop a .html, .htm, or .zip file.'
+      )
     } catch (err) {
       setStatus('error')
       setStatusDetail(err instanceof Error ? err.message : String(err))
@@ -152,7 +200,7 @@ function Plugin() {
   }
 
   async function handleImportFromPaste(): Promise<void> {
-    await runImport(html)
+    await runImportFromHtml(html)
   }
 
   const isBusy = status === 'parsing' || status === 'importing'
@@ -240,7 +288,7 @@ function Plugin() {
         )}
 
         <VerticalSpace space="medium" />
-        <Footer />
+        <Footer version={pluginVersion} />
       </Container>
     </Fragment>
   )
@@ -377,7 +425,7 @@ function ImageFailuresList({ failures }: { failures: IRImageFailure[] }) {
   )
 }
 
-function Footer() {
+function Footer({ version }: { version: string }) {
   return (
     <div
       style={{
@@ -393,7 +441,7 @@ function Footer() {
       }}
     >
       <span>
-        v0.1.0  ·  by{' '}
+        v{version}  ·  by{' '}
         <a
           href="https://redergo.com"
           target="_blank"
@@ -420,9 +468,16 @@ function Footer() {
 
 function progressLabel(p: ImportProgress | null): string {
   if (p === null) return 'Working…'
-  if (p.stage === 'fonts') return `Loading fonts ${p.current}/${p.total}…`
-  if (p.stage === 'nodes') return `Creating nodes ${p.current}/${p.total}…`
-  return 'Finishing…'
+  const pagePrefix =
+    p.pageIndex !== undefined && p.pageCount !== undefined && p.pageCount > 1
+      ? `Page ${p.pageIndex + 1}/${p.pageCount}${p.pageName ? ` (${p.pageName})` : ''} · `
+      : ''
+  if (p.stage === 'parsing') {
+    return `${pagePrefix}Parsing HTML…`
+  }
+  if (p.stage === 'fonts') return `${pagePrefix}Loading fonts ${p.current}/${p.total}…`
+  if (p.stage === 'nodes') return `${pagePrefix}Creating nodes ${p.current}/${p.total}…`
+  return `${pagePrefix}Finishing…`
 }
 
 export default render(Plugin)

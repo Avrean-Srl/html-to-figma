@@ -164,10 +164,30 @@ export function extractStroke(cs: CSSStyleDeclaration): IRStroke | null {
   ]
   if (!colors.every((c) => c === colors[0])) return null
 
+  // We also require all four border-styles to match. CSS allows
+  // mixed-style borders but Figma's dashPattern is per-shape, so the
+  // honest mapping is to fall back to solid when sides disagree.
+  if (!styles.every((s) => s === styles[0])) {
+    return {
+      width: widths[0],
+      color: parseColor(colors[0]),
+      style: 'solid'
+    }
+  }
+
   return {
     width: widths[0],
-    color: parseColor(colors[0])
+    color: parseColor(colors[0]),
+    style: mapBorderStyle(styles[0])
   }
+}
+
+function mapBorderStyle(s: string): 'solid' | 'dashed' | 'dotted' {
+  if (s === 'dashed') return 'dashed'
+  if (s === 'dotted') return 'dotted'
+  // double / groove / ridge / inset / outset all approximate as solid
+  // in Figma - we lose the visual fidelity, but the layout stays right.
+  return 'solid'
 }
 
 export function extractBlendMode(cs: CSSStyleDeclaration): IRBlendMode {
