@@ -11,7 +11,7 @@ A free Figma plugin that converts HTML + CSS into native Figma nodes (frames, te
 - Repo: `https://github.com/Avrean-Srl/html-to-figma`
 - Local path on owner's machine: `C:\Users\avrea\Desktop\Lavoro\Progetti\HTML-to-Figma`
 - Owner: Edoardo / Redergo
-- Status: implementation complete. 128/128 tests green. Ready for Figma Community submission once visual assets land (cover image, screenshots, demo GIF).
+- Status: implementation complete. 249/249 tests green. Ready for Figma Community submission once visual assets land (cover image, screenshots, demo GIF).
 - Niche: locked to Tailwind / shadcn / utility-first HTML, not generic web pages, not email. This drives every implementation tradeoff.
 
 ---
@@ -74,12 +74,13 @@ Originally moved to an offscreen `<div>` to avoid an iframe load-event race (abo
 
 ### Supported
 
-- Layout: `display: block/inline/inline-block`, `flex` (Auto Layout), `position: static/relative/absolute/fixed/sticky`, `z-index`, `overflow: hidden/clip` (clipsContent), padding, margin, gap (per direction), wrap, all CSS justify-content + align-items variants
-- Typography: font-family (with Inter fallback via the 4-step cascade in `src/mapper/fonts.ts`), font-size, font-weight (100-900 mapped to Figma style names with italic suffix), font-style, color, line-height, letter-spacing, text-align, text-decoration (underline + line-through)
-- Color/fill: background-color (with alpha), `linear-gradient` (any angle unit + `to <direction>`), `radial-gradient` (centered farthest-corner), opacity, all 15 CSS `mix-blend-mode` keywords
-- Borders/effects: border-radius (4 corners independent), uniform border (single SOLID stroke, INSIDE alignment), multi/inset box-shadow
+- Layout: `display: block/inline/inline-block`, `flex` (Auto Layout), `position: static/relative/absolute/fixed/sticky`, `z-index`, `overflow: hidden/clip/auto/scroll` (clipsContent - auto/scroll clip too since Figma has no scrollbar), padding, margin, gap (per direction), wrap, all CSS justify-content + align-items variants. `margin: auto` push-to-end on a 2-child flex (detected from the resolved computed margin) maps to SPACE_BETWEEN; a lone child under `justify-content: space-between` is left-aligned (Figma would otherwise center it)
+- Typography: font-family (with Inter fallback via the 4-step cascade in `src/mapper/fonts.ts`; style-name matching is space/case-insensitive so Figma's "Semi Bold" / "Extra Bold" resolve from the no-space canonical names), font-size, font-weight (100-900 mapped to Figma style names with italic suffix), font-style, color, line-height, letter-spacing, text-align, text-decoration (underline + line-through)
+- Color/fill: background-color (with alpha), `linear-gradient` (any angle unit + `to <direction>`), `radial-gradient` (centered farthest-corner), fully-transparent stops inherit the neighbour's RGB so the fade matches CSS premultiplied interpolation (no muddy black), opacity, all 15 CSS `mix-blend-mode` keywords
+- Borders/effects: border-radius (4 corners independent), uniform border (single SOLID stroke, INSIDE alignment), per-side borders (e.g. `border-top` only / asymmetric widths) via Figma's individual stroke weights, dashed / dotted border styles (dashPattern), multi/inset box-shadow
 - Images: `<img>` with data URL or `https://` URL (fetch + CORS handling), magic-byte sniffing for format (PNG/JPEG/GIF only), object-fit (cover -> FILL, contain/scale-down -> FIT)
 - SVG: `<svg>` inline via `figma.createNodeFromSvg` (text in SVG becomes vector paths)
+- Generated content: `::before` / `::after` pseudo-elements (shape boxes and text glyphs like ticks / arrows) synthesized into IR; inline phrasing (`<strong>`, `<em>`, `<b>`, `<i>`, `<mark>`) collapses into ONE text layer with per-character ranges (`setRangeFontName` / `setRangeFills` / `setRangeTextDecoration`) instead of fragmenting
 - Input: paste HTML (Paste tab), drop `.html` / `.htm` file, drop `.zip` archive (auto-inlines external stylesheets, images, and CSS `url()` font/background refs; strips scripts; absolute http(s) URLs - e.g. Google Fonts - left alone so they keep loading)
 - Multi-page ZIP: every top-level `.html` in the archive becomes its own root frame in Figma, laid out side-by-side with a 100-px gap (index.html first, others alphabetical). Single-page ZIPs and `.html` drops keep the original single-frame behavior. Progress shows `Page 3/13 (catalogo.html) · …` during the batch.
 - UX: branded red banner header, viewport selector (320/768/1024/1440/1920 px), File/Paste tabs, persistent settings via `figma.clientStorage`, progress events every 25 nodes, styled status pill, failures card with scrollable list, GitHub footer
@@ -87,9 +88,6 @@ Originally moved to an offscreen `<div>` to avoid an iframe load-event race (abo
 ### Not supported (deferred)
 
 - `transform: rotate/scale/skew` - bounding rect of a rotated element is the AABB so direct mapping misplaces it; translate works (it's in the rect)
-- Pseudo-elements `::before` / `::after` - generated boxes not synthesized into IR
-- Border per side (e.g. `border-bottom` only) - Figma has no per-side stroke
-- Dashed / dotted border styles - all strokes render solid
 - `background-image: url(...)` for raster - gradients work, URL backgrounds need parsing
 - `text-shadow`, `text-transform`, `white-space`, `word-break`, `hyphens`
 - Conic / diamond gradients
@@ -232,8 +230,6 @@ Test on actual HTML from the owner's projects (cursor/v0/shadcn output, marketin
 ### Known issues / improvements parked for v1.1+
 
 - Transform rotate/scale (AABB-vs-rotated-rect math)
-- Pseudo-elements `::before` / `::after`
-- Per-side borders (synthetic thin frames as workaround)
 - `background-image: url(...)` for raster URLs
 - `text-shadow`, `text-transform`, white-space handling
 - Node-creation batching with `await Promise.resolve()` chunking for >500-node docs
@@ -247,7 +243,7 @@ Test on actual HTML from the owner's projects (cursor/v0/shadcn output, marketin
 2. `git pull`
 3. `pnpm install`
 4. Read this file top to bottom
-5. `pnpm test` to confirm 128/128 still pass
+5. `pnpm test` to confirm 249/249 still pass
 6. Decide a goal:
    - Add a feature from the deferred list above
    - Address feedback from a real-world test
