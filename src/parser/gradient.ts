@@ -186,7 +186,49 @@ function parseStops(parts: string[]): IRGradientStop[] {
     else lastFilled = raw[i].position as number
   }
 
-  return raw.map((r) => ({ position: r.position as number, color: r.color }))
+  const stops = raw.map((r) => ({ position: r.position as number, color: r.color }))
+  return fixTransparentStops(stops)
+}
+
+// CSS gradients interpolate color stops in PREMULTIPLIED alpha, so a
+// fully-transparent stop contributes no color - the gradient simply
+// fades to "nothing". The `transparent` keyword computes to
+// rgba(0, 0, 0, 0), i.e. transparent BLACK. Figma interpolates stops in
+// STRAIGHT (non-premultiplied) RGBA, so that black drags the whole fade
+// toward grey/black and the result looks muddy (e.g. a light-green
+// `linear-gradient(green, transparent)` header turning dirty grey).
+//
+// We match the CSS appearance by giving every fully-transparent stop the
+// RGB of its nearest non-transparent neighbour while keeping alpha at 0.
+// The fade then runs hue-correct (green -> green@0) and reads identical
+// to the browser. No-op when every stop is opaque or every stop is
+// transparent.
+function fixTransparentStops(stops: IRGradientStop[]): IRGradientStop[] {
+  if (!stops.some((s) => s.color.a > 0)) return stops
+  return stops.map((s, i) => {
+    if (s.color.a > 0) return s
+    const donor = nearestOpaqueColor(stops, i)
+    if (donor === null) return s
+    return {
+      position: s.position,
+      color: { r: donor.r, g: donor.g, b: donor.b, a: s.color.a }
+    }
+  })
+}
+
+function nearestOpaqueColor(
+  stops: IRGradientStop[],
+  index: number
+): IRGradientStop['color'] | null {
+  for (let d = 1; d < stops.length; d++) {
+    // Prefer the LEFT neighbour on ties: a trailing `transparent` (the
+    // common case) then inherits the colour it is fading out of.
+    const left = stops[index - d]
+    if (left && left.color.a > 0) return left.color
+    const right = stops[index + d]
+    if (right && right.color.a > 0) return right.color
+  }
+  return null
 }
 
 function splitTopLevelCommas(s: string): string[] {

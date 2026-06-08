@@ -91,11 +91,19 @@ export interface IRShadow {
   color: IRColor
 }
 
-// Phase 3.1 supports uniform border only. Per-side borders (e.g.
-// border-bottom only) need a workaround - deferred.
+// Borders. `width` is the uniform stroke weight (kept for the common
+// all-sides-equal case and as a fallback). `sides` carries per-side
+// weights when the CSS declares an asymmetric border (e.g. border-top
+// only, or a divider with border-bottom). Figma frames support
+// individual stroke weights (strokeTopWeight / strokeRightWeight /
+// strokeBottomWeight / strokeLeftWeight) but only ONE stroke paint, so
+// the color/style are shared across whichever sides are non-zero.
 export interface IRStroke {
   color: IRColor
   width: number
+  // Per-side weights in px. Present only when the border is NOT uniform.
+  // When omitted, `width` applies to all four sides.
+  sides?: { top: number; right: number; bottom: number; left: number }
   // CSS border-style. Maps to Figma's dashPattern: solid -> [],
   // dashed -> [8, 4], dotted -> [stroke-width, stroke-width].
   style: 'solid' | 'dashed' | 'dotted'

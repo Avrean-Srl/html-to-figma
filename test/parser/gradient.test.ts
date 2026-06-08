@@ -73,6 +73,34 @@ describe('parseGradient', () => {
     expect(parseGradient('linear-gradient(red)')).toBeNull()
     expect(parseGradient('linear-gradient()')).toBeNull()
   })
+
+  it('gives a transparent stop the RGB of its opaque neighbour (CSS premultiplied fade)', () => {
+    // .cert__head: green paper fading to `transparent` (= rgba(0,0,0,0)).
+    // Figma interpolates straight RGBA, so the black would muddy the
+    // fade. The transparent stop must inherit the green RGB, alpha 0.
+    const g = parseGradient(
+      'linear-gradient(180deg, rgb(220, 246, 230) 0%, rgba(0, 0, 0, 0) 100%)'
+    )
+    expect(g?.stops).toHaveLength(2)
+    expect(g?.stops[1].color.a).toBe(0)
+    expect(g?.stops[1].color.r).toBeCloseTo(220 / 255, 4)
+    expect(g?.stops[1].color.g).toBeCloseTo(246 / 255, 4)
+    expect(g?.stops[1].color.b).toBeCloseTo(230 / 255, 4)
+  })
+
+  it('leaves a genuine black-to-transparent-black fade alone', () => {
+    // `linear-gradient(black, transparent)` should still fade black out:
+    // the transparent stop inherits black (its only opaque neighbour).
+    const g = parseGradient('linear-gradient(rgb(0, 0, 0), rgba(0, 0, 0, 0))')
+    expect(g?.stops[1].color).toEqual({ r: 0, g: 0, b: 0, a: 0 })
+  })
+
+  it('keeps an all-transparent gradient untouched', () => {
+    const g = parseGradient(
+      'linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))'
+    )
+    expect(g?.stops.every((s) => s.color.a === 0)).toBe(true)
+  })
 })
 
 describe('parseGradients (multi-background)', () => {

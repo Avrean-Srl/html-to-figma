@@ -38,11 +38,34 @@ describe('extractStroke', () => {
     expect(stroke?.color.r).toBe(1)
   })
 
-  it('returns null for per-side borders (Phase 3.1 limitation)', () => {
+  it('captures a per-side border as individual stroke weights', () => {
     const el = styled(
-      'width: 100px; height: 50px; border-bottom: 2px solid red'
+      'width: 100px; height: 50px; border-bottom: 2px solid rgb(255, 0, 0)'
     )
-    expect(extractStroke(getComputedStyle(el))).toBeNull()
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke).not.toBeNull()
+    expect(stroke?.sides).toEqual({ top: 0, right: 0, bottom: 2, left: 0 })
+    // Color/style come from the painting (bottom) side, not the
+    // zero-width sides whose color defaults to the element text color.
+    expect(stroke?.color.r).toBe(1)
+    expect(stroke?.style).toBe('solid')
+  })
+
+  it('keeps a uniform border as a single weight (no per-side data)', () => {
+    const el = styled(
+      'width: 100px; height: 50px; border: 3px solid rgb(0, 0, 0)'
+    )
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke?.width).toBe(3)
+    expect(stroke?.sides).toBeUndefined()
+  })
+
+  it('captures asymmetric widths (border-top thicker than border-bottom)', () => {
+    const el = styled(
+      'width: 100px; height: 50px; border-top: 4px solid rgb(0, 0, 0); border-bottom: 1px solid rgb(0, 0, 0)'
+    )
+    const stroke = extractStroke(getComputedStyle(el))
+    expect(stroke?.sides).toEqual({ top: 4, right: 0, bottom: 1, left: 0 })
   })
 
   it('returns null when border-style is none even if width is set', () => {

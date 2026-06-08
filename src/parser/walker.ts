@@ -299,6 +299,7 @@ function walkElement(
   // user to align manually in Figma, which is the safer trade-off.
   if (autoLayout !== null) {
     applyFlexChildLayoutProps(el as HTMLElement, autoLayout, childOrigins)
+    normalizeLoneChildSpaceBetween(cs, autoLayout, childOrigins)
   }
 
   return buildFrame(cs, layout, reorderForZIndex(children), idGen, tag, autoLayout)
@@ -360,22 +361,57 @@ function applyFlexChildLayoutProps(
   detectAutoMarginAlignment(parent, autoLayout, childOrigins)
 }
 
+// Figma renders a SINGLE child under primaryAxisAlign SPACE_BETWEEN
+// CENTERED, but CSS `justify-content: space-between` packs a lone flex
+// item to the START. So a one-child `.page__head { display:flex;
+// justify-content:space-between }` (title + subtitle wrapper) lands
+// centered on the page instead of left-aligned. Downgrade to 'min'.
+//
+// Only `space-between` is special-cased: `space-around` / `space-evenly`
+// genuinely center a lone item in BOTH CSS and Figma, so leave those.
+// We read the raw computed `justify-content` because mapJustifyContent
+// collapses all three space-* values into 'space-between'.
+function normalizeLoneChildSpaceBetween(
+  cs: CSSStyleDeclaration,
+  autoLayout: IRAutoLayout,
+  childOrigins: Array<{ node: IRNode; el: Element }>
+): void {
+  if (autoLayout.primaryAxisAlign !== 'space-between') return
+  if (cs.justifyContent !== 'space-between') return
+  const inFlowCount = childOrigins.filter(
+    ({ node }) => node.positioning !== 'absolute'
+  ).length
+  if (inFlowCount < 2) {
+    autoLayout.primaryAxisAlign = 'min'
+  }
+}
+
 function detectAutoMarginAlignment(
   parent: HTMLElement,
   autoLayout: IRAutoLayout,
   childOrigins: Array<{ node: IRNode; el: Element }>
 ): void {
+  // Only the in-flow children participate in flex distribution.
+  // Absolutely-positioned siblings (position: absolute / fixed) are
+  // taken out of flow and must not be counted - otherwise a flex column
+  // with a single auto-margin child plus an absolute footer reads as 3
+  // children and the auto-margin (push-to-end) idiom goes undetected.
+  // This is the .login__left case: brand + manifest(margin-top:auto)
+  // are the two flex children, .login__foot is position:absolute.
+  const inFlow = childOrigins.filter(
+    ({ node }) => node.positioning !== 'absolute'
+  )
   // Only handle the two-child case. With three or more in-flow
   // children, 'space-between' would distribute everything evenly,
   // which is rarely the CSS author's intent (they'd just have used
   // justify-content: space-between explicitly).
-  if (childOrigins.length !== 2) return
+  if (inFlow.length !== 2) return
   // Don't override an explicit non-min alignment.
   if (autoLayout.primaryAxisAlign !== 'min') return
   // Don't trigger when a child carries layoutGrow - the grow itself
   // already consumes any leftover room, so the gap math would be a
   // false positive.
-  if (childOrigins.some(({ node }) => (node.layoutGrow ?? 0) > 0)) return
+  if (inFlow.some(({ node }) => (node.layoutGrow ?? 0) > 0)) return
 
   const horizontal = autoLayout.direction === 'horizontal'
   const win = parent.ownerDocument?.defaultView ?? window
@@ -390,19 +426,38 @@ function detectAutoMarginAlignment(
   const parentContent = (horizontal ? parentRect.width : parentRect.height) - padStart - padEnd
   if (parentContent <= 0) return
 
-  const firstRect = childOrigins[0].el.getBoundingClientRect()
-  const secondRect = childOrigins[1].el.getBoundingClientRect()
+  const firstRect = inFlow[0].el.getBoundingClientRect()
+  const secondRect = inFlow[1].el.getBoundingClientRect()
   const firstSize = horizontal ? firstRect.width : firstRect.height
   const secondSize = horizontal ? secondRect.width : secondRect.height
   const declaredGap = autoLayout.gap
-  const usedSize = firstSize + secondSize + declaredGap
-  const unused = parentContent - usedSize
+  const freeSpace = parentContent - firstSize - secondSize - declaredGap
+  if (freeSpace <= 40) return
 
-  // Threshold: at least 40 px of empty space AND at least 15 % of the
-  // parent's content extent. Both filters reduce false positives on
-  // tight flex rows where CSS gap already accounts for visible
-  // whitespace.
-  if (unused > 40 && unused > parentContent * 0.15) {
+  // Leftover room alone does NOT mean "push to the ends". A plain
+  // `justify-content: flex-start` row (e.g. an `<li>` with a fixed-width
+  // label span + a short value) also leaves a trailing gap, and must
+  // stay left-aligned - converting it to space-between would shove the
+  // two halves to opposite edges. The reliable signal is an ACTUAL auto
+  // margin: getComputedStyle resolves a flex item's `margin: auto` to
+  // the used pixel length it absorbed, so we read the gap-facing
+  // margins. `margin-left:auto` on the 2nd child or `margin-right:auto`
+  // on the 1st child both open the same central gap (column: top/bottom).
+  const cs0 = win.getComputedStyle(inFlow[0].el)
+  const cs1 = win.getComputedStyle(inFlow[1].el)
+  const leadSecond = horizontal
+    ? parseFloat(cs1.marginLeft) || 0
+    : parseFloat(cs1.marginTop) || 0
+  const trailFirst = horizontal
+    ? parseFloat(cs0.marginRight) || 0
+    : parseFloat(cs0.marginBottom) || 0
+  const autoGap = Math.max(leadSecond, trailFirst)
+
+  // An auto margin absorbs (nearly) all of the free space, so the used
+  // margin should account for most of the leftover. A small fixed
+  // margin sitting next to a large flex-start gap fails this and stays
+  // 'min', which is what kills the false positives.
+  if (autoGap > 40 && autoGap >= freeSpace * 0.9) {
     autoLayout.primaryAxisAlign = 'space-between'
   }
 }

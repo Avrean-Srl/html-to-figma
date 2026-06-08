@@ -31,6 +31,18 @@ export function refKey(ref: IRFontRef): string {
   return `${ref.family}|${ref.weight}|${ref.style}`
 }
 
+// Figma font style names are not spelled consistently across families:
+// Inter ships "Semi Bold" / "Extra Light" / "Extra Bold" (with spaces),
+// while many other families use "SemiBold" / "ExtraLight" (no spaces),
+// and casing varies too. weightToStyle emits the no-space canonical
+// form, so a literal `Set.has('Inter|SemiBold')` misses Inter's real
+// "Semi Bold" and the whole weight silently falls back to Regular.
+// Normalizing (lowercase, strip spaces) before comparison makes the
+// match resilient to both spellings.
+function normalizeStyle(style: string): string {
+  return style.toLowerCase().replace(/\s+/g, '')
+}
+
 // Resolves every IR font reference to a concrete Figma FontName that is
 // known to be available and batch-loads each unique (family, style)
 // pair via figma.loadFontAsync. Cascade per ref:
@@ -47,12 +59,21 @@ export async function resolveAndLoadFonts(
   refs: ReadonlyArray<IRFontRef>
 ): Promise<FontMap> {
   const available = await figma.listAvailableFontsAsync()
-  const availableSet = new Set(
-    available.map((f) => `${f.fontName.family}|${f.fontName.style}`)
-  )
+  // Index available fonts by `${family}|${normalizedStyle}` -> the real
+  // FontName (with Figma's exact spelling, which loadFontAsync needs).
+  const availableIndex = new Map<string, FontName>()
+  for (const f of available) {
+    availableIndex.set(
+      `${f.fontName.family}|${normalizeStyle(f.fontName.style)}`,
+      f.fontName
+    )
+  }
 
-  const has = (family: string, style: string): boolean =>
-    availableSet.has(`${family}|${style}`)
+  // Returns the actual available FontName for (family, desiredStyle),
+  // matched case/space-insensitively, or null if the family doesn't
+  // ship that style.
+  const lookup = (family: string, style: string): FontName | null =>
+    availableIndex.get(`${family}|${normalizeStyle(style)}`) ?? null
 
   const resolved = new Map<string, FontName>()
   const toLoad = new Map<string, FontName>()
@@ -62,15 +83,12 @@ export async function resolveAndLoadFonts(
     const targetStyle = weightToStyle(ref.weight, italic)
 
     let chosen: FontName | null = null
-    if (ref.family && has(ref.family, targetStyle)) {
-      chosen = { family: ref.family, style: targetStyle }
-    } else if (ref.family && has(ref.family, FALLBACK_STYLE)) {
-      chosen = { family: ref.family, style: FALLBACK_STYLE }
-    } else if (has(FALLBACK_FAMILY, targetStyle)) {
-      chosen = { family: FALLBACK_FAMILY, style: targetStyle }
-    } else {
-      chosen = FALLBACK_FONT
+    if (ref.family) chosen = lookup(ref.family, targetStyle)
+    if (chosen === null && ref.family) {
+      chosen = lookup(ref.family, FALLBACK_STYLE)
     }
+    if (chosen === null) chosen = lookup(FALLBACK_FAMILY, targetStyle)
+    if (chosen === null) chosen = FALLBACK_FONT
 
     resolved.set(refKey(ref), chosen)
     toLoad.set(`${chosen.family}|${chosen.style}`, chosen)

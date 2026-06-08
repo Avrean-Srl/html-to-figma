@@ -56,4 +56,14 @@ describe('extractClipsContent', () => {
     const el = styled('overflow-x: hidden; overflow-y: visible')
     expect(extractClipsContent(getComputedStyle(el))).toBe(true)
   })
+
+  it('returns true for overflow-x: auto (code box with a long unbreakable string)', () => {
+    const el = styled('overflow-x: auto')
+    expect(extractClipsContent(getComputedStyle(el))).toBe(true)
+  })
+
+  it('returns true for overflow: scroll', () => {
+    const el = styled('overflow: scroll')
+    expect(extractClipsContent(getComputedStyle(el))).toBe(true)
+  })
 })

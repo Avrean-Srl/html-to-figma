@@ -82,6 +82,39 @@ describe('resolveAndLoadFonts', () => {
     })
   })
 
+  it('matches Figma spaced style names (Inter "Semi Bold") for weight 600', async () => {
+    // weightToStyle(600) emits the no-space "SemiBold", but Figma's
+    // Inter ships "Semi Bold". The match must be space/case-insensitive
+    // and resolve to Figma's exact spelling so loadFontAsync succeeds -
+    // otherwise the title silently renders Regular.
+    uninstallMockFigma()
+    const local = installMockFigma({
+      availableFonts: [
+        { family: 'Inter', style: 'Regular' },
+        { family: 'Inter', style: 'Semi Bold' },
+        { family: 'Inter', style: 'Extra Bold' }
+      ]
+    })
+    const refs: IRFontRef[] = [
+      { family: 'Inter', weight: 600, style: 'normal' },
+      { family: 'Inter', weight: 800, style: 'normal' }
+    ]
+    const resolved = await resolveAndLoadFonts(refs)
+
+    expect(resolved.get('Inter|600|normal')).toEqual({
+      family: 'Inter',
+      style: 'Semi Bold'
+    })
+    expect(resolved.get('Inter|800|normal')).toEqual({
+      family: 'Inter',
+      style: 'Extra Bold'
+    })
+    expect(local.loadedFonts).toContainEqual({
+      family: 'Inter',
+      style: 'Semi Bold'
+    })
+  })
+
   it('deduplicates load calls for identical (family, style) pairs', async () => {
     const refs: IRFontRef[] = [
       { family: 'Inter', weight: 400, style: 'normal' },

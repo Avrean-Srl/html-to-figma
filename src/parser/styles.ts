@@ -117,14 +117,20 @@ export function extractZIndex(cs: CSSStyleDeclaration): number {
   return Number.isNaN(n) ? 0 : n
 }
 
+// Any non-visible overflow on either axis means the box clips its
+// content. `auto` and `scroll` clip too (a browser shows a scrollbar;
+// Figma has none, so the off-box content is hidden) - e.g. a code box
+// with `overflow-x: auto` holding an unbreakable hash string would
+// otherwise spill past the frame. The CSS rule that a single non-visible
+// axis forces the other to clip as well means checking each axis for
+// any of hidden/clip/auto/scroll is sufficient.
+const CLIPPING_OVERFLOW = new Set(['hidden', 'clip', 'auto', 'scroll'])
+
 export function extractClipsContent(cs: CSSStyleDeclaration): boolean {
   return (
-    cs.overflow === 'hidden' ||
-    cs.overflow === 'clip' ||
-    cs.overflowX === 'hidden' ||
-    cs.overflowX === 'clip' ||
-    cs.overflowY === 'hidden' ||
-    cs.overflowY === 'clip'
+    CLIPPING_OVERFLOW.has(cs.overflow) ||
+    CLIPPING_OVERFLOW.has(cs.overflowX) ||
+    CLIPPING_OVERFLOW.has(cs.overflowY)
   )
 }
 
@@ -132,29 +138,31 @@ export function extractShadows(cs: CSSStyleDeclaration): IRShadow[] {
   return parseBoxShadow(cs.boxShadow)
 }
 
-// Uniform border only in Phase 3.1. Per-side borders (e.g. border-bottom
-// only) are CSS-common but Figma has no per-side stroke - that's a
-// separate workaround pass (synthetic thin frames as borders) deferred.
-// We detect uniform borders by requiring all four sides to match.
+// Extracts a frame border. Uniform borders (all four sides equal) map
+// to Figma's single strokeWeight; asymmetric borders (border-top only,
+// a border-bottom divider, etc.) map to Figma's per-side stroke weights
+// (strokeTopWeight / ...). Figma allows only ONE stroke paint per node,
+// so when sides differ in color/style we pick the dominant non-zero
+// side for color and style and keep the per-side widths.
 export function extractStroke(cs: CSSStyleDeclaration): IRStroke | null {
-  const widths = [
-    parseFloat(cs.borderTopWidth) || 0,
-    parseFloat(cs.borderRightWidth) || 0,
-    parseFloat(cs.borderBottomWidth) || 0,
-    parseFloat(cs.borderLeftWidth) || 0
-  ]
-  if (widths.every((w) => w === 0)) return null
-
-  const styles = [
+  // A side only paints when its style is neither 'none' nor 'hidden';
+  // zero out the width of any non-painting side so border-top-only
+  // (where right/bottom/left default to style:none) keeps just the top.
+  const sideStyle = [
     cs.borderTopStyle,
     cs.borderRightStyle,
     cs.borderBottomStyle,
     cs.borderLeftStyle
   ]
-  if (styles.some((s) => s === 'none' || s === 'hidden')) return null
-
-  // Reject per-side borders: all four widths and colors must match.
-  if (!widths.every((w) => w === widths[0])) return null
+  const widths = [
+    parseFloat(cs.borderTopWidth) || 0,
+    parseFloat(cs.borderRightWidth) || 0,
+    parseFloat(cs.borderBottomWidth) || 0,
+    parseFloat(cs.borderLeftWidth) || 0
+  ].map((w, i) =>
+    sideStyle[i] === 'none' || sideStyle[i] === 'hidden' ? 0 : w
+  )
+  if (widths.every((w) => w === 0)) return null
 
   const colors = [
     cs.borderTopColor,
@@ -162,23 +170,39 @@ export function extractStroke(cs: CSSStyleDeclaration): IRStroke | null {
     cs.borderBottomColor,
     cs.borderLeftColor
   ]
-  if (!colors.every((c) => c === colors[0])) return null
 
-  // We also require all four border-styles to match. CSS allows
-  // mixed-style borders but Figma's dashPattern is per-shape, so the
-  // honest mapping is to fall back to solid when sides disagree.
-  if (!styles.every((s) => s === styles[0])) {
-    return {
-      width: widths[0],
-      color: parseColor(colors[0]),
-      style: 'solid'
-    }
+  // Color + style come from the painting sides only. Empty (zero-width)
+  // sides report the CSS-default border color (the element's text color)
+  // which would skew the choice, so we ignore them.
+  const paintingIdx = widths
+    .map((w, i) => (w > 0 ? i : -1))
+    .filter((i) => i >= 0)
+  // Dominant side = thickest painting side (ties resolve to the first,
+  // i.e. top > right > bottom > left), used to pick the shared paint.
+  const dominant = paintingIdx.reduce((best, i) =>
+    widths[i] > widths[best] ? i : best
+  )
+  const color = parseColor(colors[dominant])
+
+  // Border-style maps to a single dashPattern in Figma. When painting
+  // sides disagree on style, fall back to the dominant side's style.
+  const style = mapBorderStyle(sideStyle[dominant])
+
+  const uniform = paintingIdx.length === 4 && widths.every((w) => w === widths[0])
+  if (uniform) {
+    return { width: widths[0], color, style }
   }
 
   return {
-    width: widths[0],
-    color: parseColor(colors[0]),
-    style: mapBorderStyle(styles[0])
+    width: widths[dominant],
+    sides: {
+      top: widths[0],
+      right: widths[1],
+      bottom: widths[2],
+      left: widths[3]
+    },
+    color,
+    style
   }
 }
 
@@ -236,9 +260,22 @@ export function hasFrameWorthyStyling(cs: CSSStyleDeclaration): boolean {
   const pl = parseFloat(cs.paddingLeft) || 0
   if (pt > 0 || pr > 0 || pb > 0 || pl > 0) return true
 
-  // Uniform border with non-zero width
-  const bw = parseFloat(cs.borderTopWidth) || 0
-  if (bw > 0 && cs.borderTopStyle !== 'none') return true
+  // Any painting border side (top / right / bottom / left). A lone
+  // border-bottom divider or border-top separator must survive as a
+  // frame so its stroke is not flattened away.
+  const borderSides: Array<[string, string]> = [
+    [cs.borderTopWidth, cs.borderTopStyle],
+    [cs.borderRightWidth, cs.borderRightStyle],
+    [cs.borderBottomWidth, cs.borderBottomStyle],
+    [cs.borderLeftWidth, cs.borderLeftStyle]
+  ]
+  if (
+    borderSides.some(
+      ([w, s]) => (parseFloat(w) || 0) > 0 && s !== 'none' && s !== 'hidden'
+    )
+  ) {
+    return true
+  }
 
   if (cs.boxShadow && cs.boxShadow !== 'none') return true
 

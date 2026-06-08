@@ -177,6 +177,53 @@ describe('margin-left: auto detection -> primaryAxisAlign space-between', () => 
     }
   })
 
+  it('converts a column flex when the 3rd child is position:absolute (only 2 in-flow)', () => {
+    // The .login__left case: flex column with brand at top and a
+    // manifest block pushed to the bottom via margin-top:auto. A footer
+    // sits at the bottom via position:absolute, so it is OUT of flow -
+    // only 2 children participate in the flex distribution, and the
+    // auto-margin must resolve to space-between (manifest -> bottom).
+    const container = setup(`
+      <div style="display: flex; flex-direction: column; width: 800px; height: 900px; padding: 40px 56px; position: relative">
+        <a style="height: 22px; background: red"></a>
+        <div style="margin-top: auto; height: 300px; background: blue"></div>
+        <div style="position: absolute; bottom: 24px; left: 56px; right: 56px; height: 15px; background: green"></div>
+      </div>
+    `)
+    const result = walkDocument(container, 1920)
+    const panel = result.root.children[0]
+    expect(panel.type).toBe('frame')
+    if (panel.type === 'frame' && panel.autoLayout) {
+      expect(panel.autoLayout.primaryAxisAlign).toBe('space-between')
+    }
+  })
+
+  it('does NOT convert a flex-start row with a fixed label + short value (no auto margin)', () => {
+    // wizard-step6 sign row: <li class="flex gap-3">
+    //   <span style="width:80px">A</span>
+    //   <span>Snapshot completo...</span>
+    // </li>
+    // Plain flex-start with a gap. The value is short so there is large
+    // trailing free space, but NEITHER child has an auto margin - it
+    // must stay left-aligned, not get shoved to opposite edges.
+    const container = setup(`
+      <ul style="display: flex; flex-direction: column; gap: 10px; width: 600px">
+        <li style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 80px; height: 14px; background: red"></span>
+          <span style="width: 220px; height: 14px; background: blue"></span>
+        </li>
+      </ul>
+    `)
+    const result = walkDocument(container, 1920)
+    const ul = result.root.children[0]
+    if (ul.type === 'frame') {
+      const li = ul.children[0]
+      if (li.type === 'frame' && li.autoLayout) {
+        expect(li.autoLayout.primaryAxisAlign).toBe('min')
+      }
+    }
+  })
+
   it('does NOT convert when there are 3 or more in-flow children', () => {
     // 3 children with big gap would imply space-around (CSS Grid grid?
     // designer intent unclear), so we stay safe with 'min'.
@@ -191,6 +238,39 @@ describe('margin-left: auto detection -> primaryAxisAlign space-between', () => 
     const header = result.root.children[0]
     if (header.type === 'frame' && header.autoLayout) {
       expect(header.autoLayout.primaryAxisAlign).toBe('min')
+    }
+  })
+})
+
+describe('lone child under justify-content: space-between', () => {
+  it('left-aligns a single-child space-between row (Figma would center it)', () => {
+    // .page__head { display:flex; justify-content:space-between } wrapping
+    // a single <div> (title + subtitle). CSS packs the lone item to the
+    // start; Figma SPACE_BETWEEN would center it. Must resolve to 'min'.
+    const container = setup(`
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; width: 1856px">
+        <div style="width: 545px; height: 120px; background: red"></div>
+      </div>
+    `)
+    const result = walkDocument(container, 1920)
+    const head = result.root.children[0]
+    expect(head.type).toBe('frame')
+    if (head.type === 'frame' && head.autoLayout) {
+      expect(head.autoLayout.primaryAxisAlign).toBe('min')
+    }
+  })
+
+  it('keeps space-between for a genuine two-child space-between row', () => {
+    const container = setup(`
+      <div style="display: flex; justify-content: space-between; width: 800px">
+        <div style="width: 120px; height: 40px; background: red"></div>
+        <div style="width: 120px; height: 40px; background: blue"></div>
+      </div>
+    `)
+    const result = walkDocument(container, 1920)
+    const row = result.root.children[0]
+    if (row.type === 'frame' && row.autoLayout) {
+      expect(row.autoLayout.primaryAxisAlign).toBe('space-between')
     }
   })
 })

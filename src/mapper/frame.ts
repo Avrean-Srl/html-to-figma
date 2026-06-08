@@ -47,10 +47,23 @@ export function createFrameFromIR(ir: IRFrame): FrameNode {
         opacity: ir.stroke.color.a
       }
     ]
-    frame.strokeWeight = ir.stroke.width
     // INSIDE matches box-sizing: border-box visually - the border lives
-    // within the frame box rather than extending it.
+    // within the frame box rather than extending it. Set this BEFORE the
+    // per-side weights: Figma resolves individual stroke weights against
+    // the current strokeAlign.
     frame.strokeAlign = 'INSIDE'
+    if (ir.stroke.sides) {
+      // Asymmetric border (e.g. border-top only, a border-bottom
+      // divider). Figma frames carry one stroke paint but per-side
+      // weights, so the color/style above are shared and each edge gets
+      // its own thickness. A 0-weight side simply draws nothing.
+      frame.strokeTopWeight = ir.stroke.sides.top
+      frame.strokeRightWeight = ir.stroke.sides.right
+      frame.strokeBottomWeight = ir.stroke.sides.bottom
+      frame.strokeLeftWeight = ir.stroke.sides.left
+    } else {
+      frame.strokeWeight = ir.stroke.width
+    }
     // Map CSS border-style to Figma's dashPattern. The numbers below
     // are the same defaults the Figma UI ships in its stroke style
     // picker - dashed ≈ "8px on, 4px off", dotted ≈ square dots whose
