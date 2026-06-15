@@ -199,4 +199,45 @@ describe('walkDocument', () => {
       }
     }
   })
+
+  it('captures an internal href on a standalone nav link', () => {
+    const container = setup('<a href="catalogo.html">Catalogo</a>')
+    const result = walkDocument(container, 1440)
+
+    const link = result.root.children[0]
+    expect(link.linkHref).toBe('catalogo.html')
+  })
+
+  it('captures href on a link that wraps element children', () => {
+    const container = setup('<a href="./contatti.html"><span>Box</span></a>')
+    const result = walkDocument(container, 1440)
+
+    const link = result.root.children[0]
+    expect(link.type).toBe('frame')
+    expect(link.linkHref).toBe('./contatti.html')
+  })
+
+  it('does not capture mailto, tel, javascript, or pure-fragment hrefs', () => {
+    for (const href of ['mailto:a@b.com', 'tel:+39055', 'javascript:void(0)', '#top']) {
+      const container = setup(`<a href="${href}">x</a>`)
+      const result = walkDocument(container, 1440)
+      expect(result.root.children[0].linkHref).toBeUndefined()
+    }
+  })
+
+  it('leaves inline links merged into a paragraph without a node-level href', () => {
+    const container = setup('<p>see <a href="x.html">link</a> here</p>')
+    const result = walkDocument(container, 1440)
+
+    // The <a> is collapsed into the paragraph's text ranges, so no
+    // standalone node carries linkHref - matches the v1 scope (nav links
+    // only, not inline word-level links).
+    const para = result.root.children[0]
+    expect(para.linkHref).toBeUndefined()
+    if (para.type === 'frame') {
+      for (const child of para.children) {
+        expect(child.linkHref).toBeUndefined()
+      }
+    }
+  })
 })

@@ -10,6 +10,11 @@ import { createTextFromIR } from './text'
 export interface MaterializeResult {
   root: FrameNode
   nodesCreated: number
+  // Figma nodes that carried an internal navigation href in the IR, paired
+  // with that raw href. main.ts resolves each href to a page frame and
+  // wires an ON_CLICK -> NAVIGATE prototype reaction. Empty when no links
+  // were captured (e.g. a page with no internal <a> targets).
+  linkNodes: Array<{ node: SceneNode; href: string }>
 }
 
 export interface MaterializeOptions {
@@ -41,6 +46,7 @@ export async function materializeIR(
   onProgress?.('nodes', 0, totalNodes)
 
   let nodesCreated = 0
+  const linkNodes: Array<{ node: SceneNode; href: string }> = []
   // Emit progress every N nodes to avoid spamming the event bus on
   // large imports. Final tick is forced when the build completes.
   const PROGRESS_CHUNK = 25
@@ -56,19 +62,22 @@ export async function materializeIR(
     parentY: number,
     parentHasAutoLayout: boolean
   ): SceneNode | null {
+    let node: SceneNode | null = null
     if (ir.type === 'frame') {
-      return buildFrame(ir, parentX, parentY, parentHasAutoLayout)
+      node = buildFrame(ir, parentX, parentY, parentHasAutoLayout)
+    } else if (ir.type === 'text') {
+      node = buildText(ir, parentX, parentY, parentHasAutoLayout)
+    } else if (ir.type === 'image') {
+      node = buildImage(ir, parentX, parentY, parentHasAutoLayout)
+    } else if (ir.type === 'svg') {
+      node = buildSvg(ir, parentX, parentY, parentHasAutoLayout)
     }
-    if (ir.type === 'text') {
-      return buildText(ir, parentX, parentY, parentHasAutoLayout)
+    // Surface link-bearing nodes so main.ts can wire prototype reactions
+    // once every page frame exists and href targets can be resolved.
+    if (node !== null && ir.linkHref) {
+      linkNodes.push({ node, href: ir.linkHref })
     }
-    if (ir.type === 'image') {
-      return buildImage(ir, parentX, parentY, parentHasAutoLayout)
-    }
-    if (ir.type === 'svg') {
-      return buildSvg(ir, parentX, parentY, parentHasAutoLayout)
-    }
-    return null
+    return node
   }
 
   function buildImage(
@@ -212,5 +221,5 @@ export async function materializeIR(
 
   const root = buildFrame(doc.root, 0, 0, false)
   onProgress?.('done', totalNodes, totalNodes)
-  return { root, nodesCreated }
+  return { root, nodesCreated, linkNodes }
 }

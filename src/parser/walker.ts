@@ -120,7 +120,48 @@ export function walkDocument(
   }
 }
 
+// Public walk entry. Delegates the heavy lifting to walkElementInner and,
+// on the way out, tags the produced node with any internal navigation
+// href so the mapper can later wire a Figma prototype reaction. Done in
+// one place here rather than at walkElementInner's ~10 return points.
 function walkElement(
+  el: Element,
+  containerRect: DOMRect,
+  idGen: () => string,
+  fontRefs: IRFontRef[]
+): IRNode | null {
+  const node = walkElementInner(el, containerRect, idGen, fontRefs)
+  if (node !== null) {
+    const href = extractNavHref(el)
+    if (href !== null) node.linkHref = href
+  }
+  return node
+}
+
+// Pull the navigation target off an <a href="...">. We keep only hrefs
+// that could point at another imported page frame; mailto/tel/javascript
+// and pure #fragments have no frame to navigate to (same-page anchors are
+// out of scope for v1). External absolute URLs are kept raw and simply
+// fail to resolve in main.ts, so they cost nothing here.
+function extractNavHref(el: Element): string | null {
+  if (el.tagName.toLowerCase() !== 'a') return null
+  const raw = el.getAttribute('href')
+  if (raw === null) return null
+  const trimmed = raw.trim()
+  if (trimmed.length === 0 || trimmed.startsWith('#')) return null
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith('mailto:') ||
+    lower.startsWith('tel:') ||
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:')
+  ) {
+    return null
+  }
+  return trimmed
+}
+
+function walkElementInner(
   el: Element,
   containerRect: DOMRect,
   idGen: () => string,

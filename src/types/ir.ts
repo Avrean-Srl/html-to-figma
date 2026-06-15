@@ -39,6 +39,14 @@ export interface IRNodeBase {
   // with the parent. Without this, the inset-0 pseudo stays at a
   // fixed measured size and overflows when the parent grows.
   constraintsStretch?: { horizontal: boolean; vertical: boolean }
+  // Internal navigation target captured from an <a href="..."> that became
+  // its OWN node (nav link, CTA button, clickable card). Preserved raw
+  // from the HTML attribute. The mapper surfaces every node carrying this
+  // and main.ts resolves the href to a sibling page frame to wire a Figma
+  // prototype reaction (ON_CLICK -> NAVIGATE). Absent on non-link nodes.
+  // Inline <a> merged into a paragraph's text ranges do NOT carry this -
+  // they have no standalone node to attach a reaction to.
+  linkHref?: string
 }
 
 // Matches CSS mix-blend-mode names. 1:1 mapping to Figma BlendMode

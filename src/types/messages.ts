@@ -35,6 +35,10 @@ export interface ImportDocumentsHandler extends EventHandler {
 
 export interface ImportDocumentsPayload {
   pages: Array<{ name: string; doc: IRDocument }>
+  // Mirror of PluginSettings.linkInteractions at import time so the main
+  // thread knows whether to wire frame-to-frame prototype reactions for
+  // this run. Only multi-page imports can resolve internal nav targets.
+  linkInteractions?: boolean
 }
 
 // main -> UI: progress update during materialization. Phase 5+ for large docs.
@@ -63,6 +67,9 @@ export interface ImportSummary {
   nodesCreated: number
   durationMs: number
   imageFailures: IRImageFailure[]
+  // Number of internal nav links wired into Figma prototype reactions.
+  // Present only for multi-page imports with linkInteractions enabled.
+  linksWired?: number
 }
 
 // main -> UI: unrecoverable error during import.
@@ -94,4 +101,8 @@ export interface SettingsChangedHandler extends EventHandler {
 
 export interface PluginSettings {
   viewportWidth: number
+  // When true, a multi-page import wires Figma prototype reactions from
+  // internal nav links (<a href="other-page.html">) to the matching page
+  // frame. Optional so settings persisted before this feature still load.
+  linkInteractions?: boolean
 }

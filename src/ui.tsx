@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Container,
   Dropdown,
   type DropdownOption,
@@ -49,6 +50,7 @@ function Plugin() {
   const [html, setHtml] = useState<string>('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [viewportWidth, setViewportWidth] = useState<string>('1440')
+  const [linkInteractions, setLinkInteractions] = useState<boolean>(false)
   const [status, setStatus] = useState<Status>('idle')
   const [statusDetail, setStatusDetail] = useState<string>('')
   const [progress, setProgress] = useState<ImportProgress | null>(null)
@@ -67,6 +69,7 @@ function Plugin() {
       (settings) => {
         settingsHydrated.current = true
         setViewportWidth(String(settings.viewportWidth))
+        setLinkInteractions(Boolean(settings.linkInteractions))
       }
     )
     const unsubProgress = on<ImportProgressHandler>('IMPORT_PROGRESS', (p) => {
@@ -75,8 +78,12 @@ function Plugin() {
     const unsubDone = on<ImportCompleteHandler>('IMPORT_COMPLETE', (summary) => {
       setStatus('done')
       setProgress(null)
+      const linkPart =
+        summary.linksWired && summary.linksWired > 0
+          ? ` · ${summary.linksWired} link${summary.linksWired === 1 ? '' : 's'} wired`
+          : ''
       setStatusDetail(
-        `Imported ${summary.nodesCreated} node${summary.nodesCreated === 1 ? '' : 's'} in ${summary.durationMs} ms`
+        `Imported ${summary.nodesCreated} node${summary.nodesCreated === 1 ? '' : 's'} in ${summary.durationMs} ms${linkPart}`
       )
       setImageFailures(summary.imageFailures)
     })
@@ -98,9 +105,10 @@ function Plugin() {
   useEffect(() => {
     if (!settingsHydrated.current) return
     emit<SettingsChangedHandler>('SETTINGS_CHANGED', {
-      viewportWidth: Number(viewportWidth)
+      viewportWidth: Number(viewportWidth),
+      linkInteractions
     })
-  }, [viewportWidth])
+  }, [viewportWidth, linkInteractions])
 
   async function handleFileSelected(file: File): Promise<void> {
     setSelectedFile(file)
@@ -158,7 +166,10 @@ function Plugin() {
         irs.push({ name: page.name, doc })
       }
       setStatus('importing')
-      emit<ImportDocumentsHandler>('IMPORT_DOCUMENTS', { pages: irs })
+      emit<ImportDocumentsHandler>('IMPORT_DOCUMENTS', {
+        pages: irs,
+        linkInteractions
+      })
     } catch (err) {
       setStatus('error')
       setStatusDetail(err instanceof Error ? err.message : String(err))
@@ -273,6 +284,24 @@ function Plugin() {
           value={viewportWidth}
           onValueChange={setViewportWidth}
         />
+        <VerticalSpace space="medium" />
+
+        <SectionLabel>Prototype</SectionLabel>
+        <VerticalSpace space="small" />
+        <Checkbox value={linkInteractions} onValueChange={setLinkInteractions}>
+          <Text>Link prototype interactions</Text>
+        </Checkbox>
+        <VerticalSpace space="extraSmall" />
+        <div
+          style={{
+            fontSize: 11,
+            opacity: 0.6,
+            lineHeight: '16px'
+          }}
+        >
+          Follows internal links (&lt;a href&gt; / buttons) and wires
+          frame-to-frame navigation. Multi-page imports (.zip) only.
+        </div>
         <VerticalSpace space="medium" />
 
         <Tabs
