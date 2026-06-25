@@ -95,6 +95,23 @@ describe('parseGradient', () => {
     expect(g?.stops[1].color).toEqual({ r: 0, g: 0, b: 0, a: 0 })
   })
 
+  it('clamps out-of-range stop positions into [0, 1] (Figma requires it)', () => {
+    // CSS permits positions outside 0-100%; Figma's set_fills rejects them.
+    const g = parseGradient('linear-gradient(red -20%, blue 150%)')
+    expect(g?.stops[0].position).toBe(0)
+    expect(g?.stops[1].position).toBe(1)
+    expect(g?.stops.every((s) => s.position >= 0 && s.position <= 1)).toBe(true)
+  })
+
+  it('keeps stop positions non-decreasing after clamping', () => {
+    const g = parseGradient('linear-gradient(red 80%, green 30%, blue 120%)')
+    const positions = g?.stops.map((s) => s.position) ?? []
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i]).toBeGreaterThanOrEqual(positions[i - 1])
+    }
+    expect(positions.every((p) => p >= 0 && p <= 1)).toBe(true)
+  })
+
   it('keeps an all-transparent gradient untouched', () => {
     const g = parseGradient(
       'linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))'

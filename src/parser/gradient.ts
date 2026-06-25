@@ -187,7 +187,22 @@ function parseStops(parts: string[]): IRGradientStop[] {
   }
 
   const stops = raw.map((r) => ({ position: r.position as number, color: r.color }))
-  return fixTransparentStops(stops)
+  return normalizeStopPositions(fixTransparentStops(stops))
+}
+
+// CSS allows stop positions outside 0-100% (e.g. `red 150%`, `blue -20%`)
+// and the interpolation above can also overshoot. Figma's set_fills rejects
+// any gradient stop whose position is < 0 or > 1, so we clamp to [0, 1].
+// We also enforce the non-decreasing order CSS guarantees: a stop's position
+// is never less than the preceding stop's (the browser raises it to match).
+function normalizeStopPositions(stops: IRGradientStop[]): IRGradientStop[] {
+  let prev = 0
+  return stops.map((s) => {
+    let p = Math.min(1, Math.max(0, s.position))
+    if (p < prev) p = prev
+    prev = p
+    return { position: p, color: s.color }
+  })
 }
 
 // CSS gradients interpolate color stops in PREMULTIPLIED alpha, so a

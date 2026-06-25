@@ -59,23 +59,26 @@ async function wirePrototypeLinks(
     const target = resolveTargetFrame(href, frameByName)
     if (target === null) continue
     if (!('setReactionsAsync' in node)) continue
+    // Typed as Reaction[] so the literals below are contextually typed:
+    // without the annotation TS widens 'ON_CLICK' / 'NODE' / 'NAVIGATE' to
+    // plain `string` and they stop matching the Trigger / Action / Navigation
+    // unions ("Type 'string' is not assignable to type 'Navigation'").
+    const reactions: Reaction[] = [
+      {
+        trigger: { type: 'ON_CLICK' },
+        actions: [
+          {
+            type: 'NODE',
+            destinationId: target.id,
+            navigation: 'NAVIGATE',
+            transition: null,
+            preserveScrollPosition: false
+          }
+        ]
+      }
+    ]
     try {
-      await (node as SceneNode & {
-        setReactionsAsync: (reactions: readonly Reaction[]) => Promise<void>
-      }).setReactionsAsync([
-        {
-          trigger: { type: 'ON_CLICK' },
-          actions: [
-            {
-              type: 'NODE',
-              destinationId: target.id,
-              navigation: 'NAVIGATE',
-              transition: null,
-              preserveScrollPosition: false
-            }
-          ]
-        }
-      ])
+      await (node as SceneNode & ReactionMixin).setReactionsAsync(reactions)
       wired++
     } catch {
       // Node may not accept reactions or the API rejected the shape;
@@ -86,11 +89,33 @@ async function wirePrototypeLinks(
 }
 
 export default async function (): Promise<void> {
+  // Load persisted settings up front so the PING handler can answer with
+  // hydrated values the moment the UI announces it is ready.
+  let settings = DEFAULT_SETTINGS
+  try {
+    const stored = await figma.clientStorage.getAsync(SETTINGS_KEY)
+    if (
+      stored &&
+      typeof stored === 'object' &&
+      typeof (stored as PluginSettings).viewportWidth === 'number'
+    ) {
+      settings = stored as PluginSettings
+    }
+  } catch {
+    // Fall back to defaults.
+  }
+
   on<PingHandler>('PING', () => {
     emit<PongHandler>('PONG', {
       version: PLUGIN_VERSION,
       receivedAt: Date.now()
     })
+    // The UI sends PING from its mount effect, AFTER registering every on()
+    // handler (including SETTINGS_LOADED). Pushing settings here - rather
+    // than eagerly right after showUI() - avoids the startup race where the
+    // message arrived first and create-figma-plugin threw "No event handler
+    // with name SETTINGS_LOADED", spamming the console on every launch.
+    emit<SettingsLoadedHandler>('SETTINGS_LOADED', settings)
   })
 
   on<SettingsChangedHandler>('SETTINGS_CHANGED', async (settings) => {
@@ -233,25 +258,5 @@ export default async function (): Promise<void> {
     }
   })
 
-  // Load persisted settings before showing the UI so the initial render
-  // already reflects the user's last viewport choice.
-  let settings = DEFAULT_SETTINGS
-  try {
-    const stored = await figma.clientStorage.getAsync(SETTINGS_KEY)
-    if (
-      stored &&
-      typeof stored === 'object' &&
-      typeof (stored as PluginSettings).viewportWidth === 'number'
-    ) {
-      settings = stored as PluginSettings
-    }
-  } catch {
-    // Fall back to defaults.
-  }
-
   showUI({ width: 480, height: 760 })
-
-  // Wait a microtask so the UI's on() handler is registered before we emit.
-  // create-figma-plugin's emit/on already buffers, so this is defensive.
-  emit<SettingsLoadedHandler>('SETTINGS_LOADED', settings)
 }

@@ -224,9 +224,12 @@ describe('margin-left: auto detection -> primaryAxisAlign space-between', () => 
     }
   })
 
-  it('does NOT convert when there are 3 or more in-flow children', () => {
-    // 3 children with big gap would imply space-around (CSS Grid grid?
-    // designer intent unclear), so we stay safe with 'min'.
+  it('injects a grow spacer before a margin-left:auto child in a 3+ child row', () => {
+    // The app top bar idiom: a left group of items, then one child with
+    // `margin-left:auto` that shoves itself + everything after it to the
+    // far end. space-between would wrongly spread the left group too, so
+    // we insert ONE layoutGrow spacer at the boundary instead and keep
+    // primaryAxisAlign = 'min'.
     const container = setup(`
       <header style="display: flex; gap: 8px; padding: 0; width: 1000px; height: 40px">
         <div style="width: 100px; height: 32px"></div>
@@ -236,8 +239,71 @@ describe('margin-left: auto detection -> primaryAxisAlign space-between', () => 
     `)
     const result = walkDocument(container, 1920)
     const header = result.root.children[0]
+    expect(header.type).toBe('frame')
     if (header.type === 'frame' && header.autoLayout) {
       expect(header.autoLayout.primaryAxisAlign).toBe('min')
+      // A spacer frame was inserted before the auto-margin child.
+      const kinds = header.children.map((c) =>
+        c.type === 'frame' && c.sourceTag === 'spacer' ? 'spacer' : c.type
+      )
+      expect(kinds).toEqual(['frame', 'frame', 'spacer', 'frame'])
+      const spacer = header.children[2]
+      expect(spacer.layoutGrow).toBe(1)
+    }
+  })
+
+  it('injects a spacer for the real top-bar pattern (many children, one margin-left:auto)', () => {
+    // Mirrors deltatre's `<header class="top">`: title/sep/day on the left,
+    // then `.search { margin-left:auto }` followed by icons + a CTA on the
+    // right. The auto margin absorbs all the free space; one spacer must
+    // land right before the search.
+    const container = setup(`
+      <header style="display: flex; gap: 12px; align-items: center; width: 1200px; height: 56px; padding: 0 20px">
+        <div style="width: 90px; height: 24px">title</div>
+        <div style="width: 1px; height: 20px"></div>
+        <div style="width: 160px; height: 20px">day</div>
+        <div style="margin-left: auto; width: 240px; height: 36px">search</div>
+        <div style="width: 36px; height: 36px"></div>
+        <div style="width: 150px; height: 36px">cta</div>
+      </header>
+    `)
+    const result = walkDocument(container, 1920)
+    const header = result.root.children[0]
+    expect(header.type).toBe('frame')
+    if (header.type === 'frame') {
+      const spacers = header.children.filter(
+        (c) => c.type === 'frame' && c.sourceTag === 'spacer'
+      )
+      expect(spacers).toHaveLength(1)
+      // The spacer sits at index 3 - right before the search box (the 4th
+      // original child) - so search + icon + cta get pushed to the end.
+      expect(
+        header.children[3].type === 'frame' &&
+          header.children[3].sourceTag === 'spacer'
+      ).toBe(true)
+      expect(header.children[3].layoutGrow).toBe(1)
+    }
+  })
+
+  it('does NOT inject a spacer in a 3-child flex-start row with no auto margin', () => {
+    // Free trailing space alone must not trigger a spacer - only a resolved
+    // auto margin does. Three short items left-aligned with room to spare.
+    const container = setup(`
+      <header style="display: flex; gap: 8px; padding: 0; width: 1000px; height: 40px">
+        <div style="width: 100px; height: 32px"></div>
+        <div style="width: 100px; height: 32px"></div>
+        <div style="width: 100px; height: 32px"></div>
+      </header>
+    `)
+    const result = walkDocument(container, 1920)
+    const header = result.root.children[0]
+    if (header.type === 'frame') {
+      expect(header.children).toHaveLength(3)
+      expect(
+        header.children.every(
+          (c) => !(c.type === 'frame' && c.sourceTag === 'spacer')
+        )
+      ).toBe(true)
     }
   })
 })

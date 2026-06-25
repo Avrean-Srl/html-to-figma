@@ -90,6 +90,16 @@ export function walkDocument(
   }
 
   const bodyCs = getComputedStyle(body)
+  // containerRect.height is the body's BORDER-BOX height, which a global
+  // `html, body { height: 100% }` pins to the viewport (e.g. 900px) even
+  // when the page's content is taller - a `.app { min-height: 100vh }`
+  // grid that grows past the fold is the common case. The harness also
+  // sets `overflow: hidden`, so the overflow is clipped in measurement but
+  // NOT in the box height. Result: the root frame came out viewport-tall
+  // and every child below the fold spilled out the bottom. scrollHeight
+  // reports the true content extent (it counts clipped overflow), so the
+  // page frame now contains all of its content.
+  const rootHeight = Math.max(containerRect.height, body.scrollHeight)
   const root: IRFrame = {
     type: 'frame',
     id: idGen(),
@@ -97,7 +107,7 @@ export function walkDocument(
       x: 0,
       y: 0,
       width: viewportWidth,
-      height: containerRect.height
+      height: rootHeight
     },
     opacity: 1,
     hidden: false,
@@ -341,6 +351,7 @@ function walkElementInner(
   if (autoLayout !== null) {
     applyFlexChildLayoutProps(el as HTMLElement, autoLayout, childOrigins)
     normalizeLoneChildSpaceBetween(cs, autoLayout, childOrigins)
+    injectAutoMarginSpacers(el as HTMLElement, autoLayout, children, childOrigins, idGen)
   }
 
   return buildFrame(cs, layout, reorderForZIndex(children), idGen, tag, autoLayout)
@@ -500,6 +511,111 @@ function detectAutoMarginAlignment(
   // 'min', which is what kills the false positives.
   if (autoGap > 40 && autoGap >= freeSpace * 0.9) {
     autoLayout.primaryAxisAlign = 'space-between'
+  }
+}
+
+// Handles the `margin-*: auto` "push to the end" idiom for flex containers
+// with THREE OR MORE in-flow children - the case detectAutoMarginAlignment
+// deliberately skips (space-between would spread ALL items evenly, but the
+// author meant "keep the left group tight, shove this child + everything
+// after it to the far end"). The boero/deltatre app top bar is the canonical
+// case: `<header style="display:flex"> title · sep · day · <search
+// style="margin-left:auto"> · icons · button`. Figma has no per-child auto
+// margin, so we insert a single transparent layoutGrow=1 SPACER frame at the
+// boundary - it eats the free space exactly like the CSS auto margin and
+// pushes the trailing items to the end.
+//
+// Precision (this is why spacer injection was previously removed): we only
+// fire when ONE child's leading margin absorbed ~all of the container's free
+// space, the same signal detectAutoMarginAlignment uses. A plain flex-start
+// row with a trailing gap (no auto margin) reads 0 leading margins and is
+// left untouched; a flex-grow child consumes the free space itself, so the
+// grow guard below skips those too.
+function injectAutoMarginSpacers(
+  parent: HTMLElement,
+  autoLayout: IRAutoLayout,
+  children: IRNode[],
+  childOrigins: Array<{ node: IRNode; el: Element }>,
+  idGen: () => string
+): void {
+  const inFlow = childOrigins.filter(
+    ({ node }) => node.positioning !== 'absolute'
+  )
+  // 2-child case is owned by detectAutoMarginAlignment (-> space-between).
+  if (inFlow.length < 3) return
+  // A grown child already absorbs the leftover room; no auto-margin gap.
+  if (inFlow.some(({ node }) => (node.layoutGrow ?? 0) > 0)) return
+
+  const horizontal = autoLayout.direction === 'horizontal'
+  const win = parent.ownerDocument?.defaultView ?? window
+  const parentRect = parent.getBoundingClientRect()
+  const parentCs = win.getComputedStyle(parent)
+  const padStart = horizontal
+    ? parseFloat(parentCs.paddingLeft) || 0
+    : parseFloat(parentCs.paddingTop) || 0
+  const padEnd = horizontal
+    ? parseFloat(parentCs.paddingRight) || 0
+    : parseFloat(parentCs.paddingBottom) || 0
+  const parentContent =
+    (horizontal ? parentRect.width : parentRect.height) - padStart - padEnd
+  if (parentContent <= 0) return
+
+  let sumSizes = 0
+  for (const { el } of inFlow) {
+    const r = el.getBoundingClientRect()
+    sumSizes += horizontal ? r.width : r.height
+  }
+  const totalGaps = autoLayout.gap * (inFlow.length - 1)
+  const freeSpace = parentContent - sumSizes - totalGaps
+  if (freeSpace <= 40) return
+
+  // Find the boundary child whose leading auto margin swallowed ~all of the
+  // free space. Check both sides of each seam: `margin-right:auto` on the
+  // previous child and `margin-left:auto` on this one open the same gap.
+  for (let i = 1; i < inFlow.length; i++) {
+    const prevCs = win.getComputedStyle(inFlow[i - 1].el)
+    const curCs = win.getComputedStyle(inFlow[i].el)
+    const lead = horizontal
+      ? parseFloat(curCs.marginLeft) || 0
+      : parseFloat(curCs.marginTop) || 0
+    const trail = horizontal
+      ? parseFloat(prevCs.marginRight) || 0
+      : parseFloat(prevCs.marginBottom) || 0
+    const autoGap = Math.max(lead, trail)
+    if (autoGap > 40 && autoGap >= freeSpace * 0.9) {
+      const idx = children.indexOf(inFlow[i].node)
+      if (idx >= 0) children.splice(idx, 0, makeSpacer(idGen))
+      // One spacer is enough: it absorbs the whole free space and pushes
+      // every later sibling to the end, matching the single-auto-margin
+      // idiom. Stop so we don't double-insert on downstream seams.
+      return
+    }
+  }
+}
+
+// A transparent, zero-size frame that fills the parent's primary axis via
+// layoutGrow. Stands in for a CSS `margin: auto` gap inside Figma Auto
+// Layout. sourceTag 'spacer' lets tests (and a curious user in Figma)
+// recognise it.
+function makeSpacer(idGen: () => string): IRFrame {
+  return {
+    type: 'frame',
+    id: idGen(),
+    layout: { x: 0, y: 0, width: 0.01, height: 0.01 },
+    opacity: 1,
+    hidden: false,
+    blendMode: 'normal',
+    zIndex: 0,
+    sourceTag: 'spacer',
+    fills: [],
+    cornerRadius: [0, 0, 0, 0],
+    children: [],
+    autoLayout: null,
+    shadows: [],
+    stroke: null,
+    clipsContent: false,
+    positioning: 'auto',
+    layoutGrow: 1
   }
 }
 
@@ -1140,6 +1256,30 @@ function positioningFromCss(
   return position === 'absolute' || position === 'fixed' ? 'absolute' : 'auto'
 }
 
+// Shared out-of-flow fields for leaf nodes (img / svg) so they behave like
+// frames do: an absolutely-positioned leaf must NOT participate in its
+// parent's Auto Layout, and an `inset: 0` leaf should stretch to fill the
+// parent. Without this an absolute decorative SVG (e.g. a full-bleed dotted
+// overlay, `position:absolute; inset:0`) was walked as an in-flow child and
+// occupied a full row/column in the parent's flex, collapsing a
+// space-between layout into overlapping content.
+function absoluteFields(cs: CSSStyleDeclaration): {
+  positioning: 'auto' | 'absolute'
+  constraintsStretch?: { horizontal: boolean; vertical: boolean }
+} {
+  const isAbs = cs.position === 'absolute' || cs.position === 'fixed'
+  if (!isAbs) return { positioning: 'auto' }
+  const stretchH = parseFloat(cs.left) === 0 && parseFloat(cs.right) === 0
+  const stretchV = parseFloat(cs.top) === 0 && parseFloat(cs.bottom) === 0
+  return {
+    positioning: 'absolute',
+    constraintsStretch:
+      stretchH || stretchV
+        ? { horizontal: stretchH, vertical: stretchV }
+        : undefined
+  }
+}
+
 function buildText(
   cs: CSSStyleDeclaration,
   layout: IRLayout,
@@ -1342,7 +1482,8 @@ function buildImage(
     sourceUrl: el.src,
     bytes: null,
     loadStatus: status,
-    objectFit: mapObjectFit(cs.objectFit)
+    objectFit: mapObjectFit(cs.objectFit),
+    ...absoluteFields(cs)
   }
 }
 
@@ -1372,7 +1513,8 @@ function buildSvg(
     hidden: false,
     blendMode: extractBlendMode(cs),
     zIndex: extractZIndex(cs),
-    svg: serializeSvgWithComputedStyles(el)
+    svg: serializeSvgWithComputedStyles(el),
+    ...absoluteFields(cs)
   }
 }
 
