@@ -157,10 +157,6 @@ export async function materializeIR(
       if (grow > 0 && 'layoutGrow' in node) {
         ;(node as FrameNode | TextNode).layoutGrow = grow
       }
-      const align = child.layoutAlign
-      if (align === 'STRETCH' && 'layoutAlign' in node) {
-        ;(node as FrameNode | TextNode).layoutAlign = 'STRETCH'
-      }
       const stretch = child.constraintsStretch
       if (stretch && 'constraints' in node) {
         ;(node as FrameNode).constraints = {
@@ -185,6 +181,15 @@ export async function materializeIR(
     // position rather than at the auto-layout origin.
     if (ownHasAutoLayout) {
       for (const { child, node } of appended) {
+        // layoutAlign overrides the parent's counterAxisAlignItems for a
+        // single child (e.g. a `margin: 0 auto` block -> CENTER). Figma
+        // only honors it once the parent IS in Auto Layout, so it MUST be
+        // set here, after applyAutoLayout - setting it in the first pass
+        // (parent layoutMode still NONE) silently no-ops.
+        const align = child.layoutAlign
+        if (align && align !== 'INHERIT' && 'layoutAlign' in node) {
+          ;(node as FrameNode | TextNode).layoutAlign = align
+        }
         if (
           child.positioning === 'absolute' &&
           'layoutPositioning' in node

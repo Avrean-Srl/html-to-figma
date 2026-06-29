@@ -341,6 +341,58 @@ describe('lone child under justify-content: space-between', () => {
   })
 })
 
+describe('counter-axis auto-margin centering -> parent counterAxisAlign', () => {
+  it('centers the container when a `margin:0 auto` child sits beside a full-width sibling (deltatre .main)', () => {
+    // .main { display:flex; flex-direction:column } wrapping a full-width
+    // header and a .content { max-width:1400px; width:100%; margin:0 auto }.
+    // When main is wider than 1400 the browser centers .content via the
+    // symmetric auto margins. Figma centers per CONTAINER, not per child,
+    // so we set the parent counterAxisAlign='center' - safe because the
+    // header already fills the full width (centering it is a no-op).
+    const container = setup(`
+      <div style="display: flex; flex-direction: column; width: 1648px">
+        <header style="height: 68px; background: red"></header>
+        <div style="max-width: 1400px; width: 100%; margin: 0 auto; height: 400px; background: blue"></div>
+      </div>
+    `, 1920)
+    const result = walkDocument(container, 1920)
+    const main = result.root.children[0]
+    expect(main.type).toBe('frame')
+    if (main.type === 'frame' && main.autoLayout) {
+      expect(main.autoLayout.counterAxisAlign).toBe('center')
+    }
+  })
+
+  it('does NOT center the container when a narrower child is start-aligned (not auto-margined)', () => {
+    // A narrow, left-aligned child with incidental symmetric fixed margins
+    // does not fill the axis - container-level centering would shift it,
+    // so the parent must stay at 'min'.
+    const container = setup(`
+      <div style="display: flex; flex-direction: column; width: 1000px; align-items: flex-start">
+        <div style="width: 200px; margin: 0 20px; height: 40px; background: red"></div>
+      </div>
+    `, 1920)
+    const result = walkDocument(container, 1920)
+    const col = result.root.children[0]
+    if (col.type === 'frame' && col.autoLayout) {
+      expect(col.autoLayout.counterAxisAlign).toBe('min')
+    }
+  })
+
+  it('centers a horizontal row when its only child uses `margin:auto 0` (vertical counter axis)', () => {
+    const container = setup(`
+      <div style="display: flex; flex-direction: row; width: 600px; height: 200px; align-items: stretch">
+        <div style="width: 100px; height: 60px; margin: auto 0; background: red"></div>
+      </div>
+    `, 1920)
+    const result = walkDocument(container, 1920)
+    const row = result.root.children[0]
+    if (row.type === 'frame' && row.autoLayout) {
+      expect(row.autoLayout.counterAxisAlign).toBe('center')
+    }
+  })
+})
+
 describe('container sizing hints from CSS display', () => {
   it('flex containers default to FIXED on both axes (pixel-perfect)', () => {
     const container = setup(`

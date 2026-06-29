@@ -411,6 +411,85 @@ function applyFlexChildLayoutProps(
   // 'min' to 'space-between'. The boero admin topbar (breadcrumb +
   // actions, or search + actions) is exactly this pattern.
   detectAutoMarginAlignment(parent, autoLayout, childOrigins)
+
+  // (c) Detect counter-axis auto-margin centering (CSS `margin: 0 auto`
+  // on a child whose cross size is capped, e.g. deltatre's `.content`
+  // inside `.main`). Figma has NO per-child counter alignment anymore
+  // ('MIN'/'CENTER'/'MAX' on layoutAlign are deprecated no-ops), so the
+  // only lever is the PARENT's counterAxisAlign, which applies to every
+  // child. We flip it to 'center' only when doing so is safe - i.e. all
+  // other in-flow children already fill the counter axis (so centering
+  // them is a no-op) or are themselves centered.
+  detectCounterAxisAutoMarginCentering(parent, autoLayout, childOrigins)
+}
+
+// CSS `margin: 0 auto` (symmetric auto margins on the cross axis) centers
+// a flex child on the counter axis. getComputedStyle resolves `auto` to
+// the used pixel length it absorbed, so a centered child shows two ~equal
+// counter-axis margins that, together with the child, fill the parent's
+// content box.
+//
+// Figma can only express counter alignment at the container level
+// (counterAxisAlignItems), shared by all children. So we promote the
+// parent to 'center' ONLY when every in-flow child is either:
+//   - centered (symmetric auto margins that fill the counter axis), or
+//   - already filling the counter axis (size ~= parent content box, the
+//     CSS `align-items: stretch` default) - centering a full-width child
+//     is a visual no-op.
+// If any child is narrower AND start-aligned (genuine left/top), we bail:
+// container-level centering would wrongly shift it. We never DOWNGRADE an
+// explicit center/max coming from align-items.
+function detectCounterAxisAutoMarginCentering(
+  parent: HTMLElement,
+  autoLayout: IRAutoLayout,
+  childOrigins: Array<{ node: IRNode; el: Element }>
+): void {
+  if (autoLayout.counterAxisAlign !== 'min') return // already center/max
+  const counterHorizontal = autoLayout.direction === 'vertical'
+  const win = parent.ownerDocument?.defaultView ?? window
+  const parentRect = parent.getBoundingClientRect()
+  const parentCs = win.getComputedStyle(parent)
+  const padStart = counterHorizontal
+    ? parseFloat(parentCs.paddingLeft) || 0
+    : parseFloat(parentCs.paddingTop) || 0
+  const padEnd = counterHorizontal
+    ? parseFloat(parentCs.paddingRight) || 0
+    : parseFloat(parentCs.paddingBottom) || 0
+  const parentContent =
+    (counterHorizontal ? parentRect.width : parentRect.height) - padStart - padEnd
+  if (parentContent <= 0) return
+
+  const EPS = 2
+  let sawCentered = false
+  for (const { node, el } of childOrigins) {
+    if (node.positioning === 'absolute') continue
+    const cs = win.getComputedStyle(el)
+    const rect = el.getBoundingClientRect()
+    const size = counterHorizontal ? rect.width : rect.height
+    const marginStart = counterHorizontal
+      ? parseFloat(cs.marginLeft) || 0
+      : parseFloat(cs.marginTop) || 0
+    const marginEnd = counterHorizontal
+      ? parseFloat(cs.marginRight) || 0
+      : parseFloat(cs.marginBottom) || 0
+
+    const fillsCounter = size + marginStart + marginEnd >= parentContent - EPS
+    if (size >= parentContent - EPS) continue // child fills the axis: safe
+    if (
+      fillsCounter &&
+      marginStart > EPS &&
+      marginEnd > EPS &&
+      Math.abs(marginStart - marginEnd) <= EPS
+    ) {
+      sawCentered = true
+      continue // a centered child: safe
+    }
+    // A narrower, non-centered child: container-level centering would
+    // move it incorrectly. Abort - keep the parent at 'min'.
+    return
+  }
+
+  if (sawCentered) autoLayout.counterAxisAlign = 'center'
 }
 
 // Figma renders a SINGLE child under primaryAxisAlign SPACE_BETWEEN

@@ -25,7 +25,11 @@ export interface IRNodeBase {
   // counter axis (e.g. sidebar links spanning the full sidebar width).
   // Translated from CSS `align-self: stretch` (or parent
   // `align-items: stretch` + child has no explicit cross-axis size).
-  // Defaults to 'INHERIT' when missing.
+  // Defaults to 'INHERIT' when missing. NOTE: 'MIN'/'CENTER'/'MAX' are
+  // deprecated no-ops in Figma's current API - per-child counter-axis
+  // alignment is gone; counter alignment lives on the PARENT frame via
+  // IRAutoLayout.counterAxisAlign and applies to ALL children. So this
+  // field only ever carries STRETCH.
   layoutAlign?: 'INHERIT' | 'STRETCH'
   // CSS position: 'absolute' / 'fixed' on a child of an Auto Layout
   // parent. Maps to Figma's layoutPositioning='ABSOLUTE' so the child
