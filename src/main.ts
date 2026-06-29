@@ -1,6 +1,7 @@
 import { emit, on, showUI } from '@create-figma-plugin/utilities'
 
 import { materializeIR } from './mapper'
+import { planSections } from './mapper/sections'
 import type { IRImageFailure } from './types/ir'
 import type {
   ImportCompleteHandler,
@@ -15,7 +16,7 @@ import type {
   SettingsLoadedHandler
 } from './types/messages'
 
-const PLUGIN_VERSION = '0.3.0'
+const PLUGIN_VERSION = '0.3.4'
 const SETTINGS_KEY = 'plugin-settings-v1'
 const DEFAULT_SETTINGS: PluginSettings = {
   viewportWidth: 1440,
@@ -24,6 +25,71 @@ const DEFAULT_SETTINGS: PluginSettings = {
 // Horizontal gutter between multi-page frames so they read as a
 // storyboard, not a tile sheet. 100 px reads cleanly at 50% zoom.
 const MULTI_PAGE_GAP = 100
+
+// Sectioned layout constants (match the hand-built "V1" page): inner
+// padding around the frames, horizontal gap between frames in a row, and
+// vertical gap between stacked sections.
+const SECTION_PAD = 120
+const SECTION_FRAME_GAP = 120
+const SECTION_VGAP = 240
+
+// Groups the imported page frames into Figma sections by filename prefix,
+// each section a horizontal row, sections stacked vertically. Returns the
+// created section nodes (the new top-level nodes to select / recenter).
+function layoutIntoSections(
+  page: PageNode,
+  built: ReadonlyArray<{ name: string; frame: FrameNode }>
+): SectionNode[] {
+  const plan = planSections(built)
+  const sections: SectionNode[] = []
+  let cumulativeY = 0
+
+  for (const group of plan) {
+    const section = figma.createSection()
+    section.name = group.key
+    page.appendChild(section)
+
+    let localX = SECTION_PAD
+    let maxH = 0
+    for (const { frame } of group.items) {
+      section.appendChild(frame)
+      // Section children use section-relative coordinates.
+      frame.x = localX
+      frame.y = SECTION_PAD
+      localX += frame.width + SECTION_FRAME_GAP
+      if (frame.height > maxH) maxH = frame.height
+    }
+
+    const sectionW = localX - SECTION_FRAME_GAP + SECTION_PAD
+    const sectionH = maxH + SECTION_PAD * 2
+    section.resizeWithoutConstraints(
+      Math.max(sectionW, 1),
+      Math.max(sectionH, 1)
+    )
+    section.x = 0
+    section.y = cumulativeY
+    cumulativeY += sectionH + SECTION_VGAP
+    sections.push(section)
+  }
+  return sections
+}
+
+// Recenters a set of top-level page nodes (frames or sections) around the
+// viewport center as a group.
+function recenterAtViewport(nodes: ReadonlyArray<SceneNode>): void {
+  if (nodes.length === 0) return
+  const minX = Math.min(...nodes.map((n) => n.x))
+  const minY = Math.min(...nodes.map((n) => n.y))
+  const maxX = Math.max(...nodes.map((n) => n.x + n.width))
+  const maxY = Math.max(...nodes.map((n) => n.y + n.height))
+  const center = figma.viewport.center
+  const dx = center.x - (minX + maxX) / 2
+  const dy = center.y - (minY + maxY) / 2
+  for (const n of nodes) {
+    n.x += dx
+    n.y += dy
+  }
+}
 
 // Resolve an internal href to one of the imported page frames by matching
 // basenames. "catalogo.html", "./catalogo.html", "/pages/catalogo.html",
@@ -167,15 +233,15 @@ export default async function (): Promise<void> {
     }
   })
 
-  on<ImportDocumentsHandler>('IMPORT_DOCUMENTS', async ({ pages, linkInteractions }) => {
+  on<ImportDocumentsHandler>('IMPORT_DOCUMENTS', async ({ pages, linkInteractions, groupSections }) => {
     const start = Date.now()
     try {
       const figmaPage = figma.currentPage
       const created: FrameNode[] = []
+      const built: Array<{ name: string; frame: FrameNode }> = []
       let totalNodes = 0
       const failures: IRImageFailure[] = []
       const pageCount = pages.length
-      let cumulativeX = 0
       // Collected across all pages so frame-to-frame links can be wired
       // only after every target frame exists.
       const allLinks: Array<{ node: SceneNode; href: string }> = []
@@ -197,32 +263,34 @@ export default async function (): Promise<void> {
         })
         figmaPage.appendChild(result.root)
         result.root.name = name
-        result.root.x = cumulativeX
-        result.root.y = 0
-        cumulativeX += result.root.width + MULTI_PAGE_GAP
 
         created.push(result.root)
+        built.push({ name, frame: result.root })
         frameByName.set(name, result.root)
         for (const link of result.linkNodes) allLinks.push(link)
         totalNodes += result.nodesCreated
         failures.push(...doc.imageFailures)
       }
 
-      // Recenter the whole row at the viewport center as a group, so
-      // the storyboard sits where the user is looking instead of at
-      // page origin.
-      if (created.length > 0) {
-        const totalWidth = cumulativeX - MULTI_PAGE_GAP
-        const tallest = Math.max(...created.map((f) => f.height))
-        const center = figma.viewport.center
-        const originX = center.x - totalWidth / 2
-        const originY = center.y - tallest / 2
-        for (const frame of created) {
-          frame.x = frame.x + originX
-          frame.y = frame.y + originY
+      // Arrange the imported frames: grouped into sections by filename
+      // prefix, or as a single horizontal storyboard row. Either way the
+      // resulting top-level nodes are recentered at the viewport.
+      if (built.length > 0) {
+        let topLevel: SceneNode[]
+        if (groupSections) {
+          topLevel = layoutIntoSections(figmaPage, built)
+        } else {
+          let cumulativeX = 0
+          for (const { frame } of built) {
+            frame.x = cumulativeX
+            frame.y = 0
+            cumulativeX += frame.width + MULTI_PAGE_GAP
+          }
+          topLevel = created
         }
-        figmaPage.selection = created
-        figma.viewport.scrollAndZoomIntoView(created)
+        recenterAtViewport(topLevel)
+        figmaPage.selection = topLevel
+        figma.viewport.scrollAndZoomIntoView(topLevel)
       }
 
       // Wire prototype navigation once every page frame exists. Opt-in via

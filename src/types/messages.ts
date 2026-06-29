@@ -39,6 +39,9 @@ export interface ImportDocumentsPayload {
   // thread knows whether to wire frame-to-frame prototype reactions for
   // this run. Only multi-page imports can resolve internal nav targets.
   linkInteractions?: boolean
+  // Group the imported page frames into Figma sections by filename prefix
+  // (tens digit: 0x, 1x, 2x...), laid out as rows stacked vertically.
+  groupSections?: boolean
 }
 
 // main -> UI: progress update during materialization. Phase 5+ for large docs.
@@ -105,4 +108,7 @@ export interface PluginSettings {
   // internal nav links (<a href="other-page.html">) to the matching page
   // frame. Optional so settings persisted before this feature still load.
   linkInteractions?: boolean
+  // When true, a multi-page import groups page frames into Figma sections
+  // by filename prefix (tens digit).
+  groupSections?: boolean
 }

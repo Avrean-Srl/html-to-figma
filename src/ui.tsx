@@ -51,6 +51,7 @@ function Plugin() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [viewportWidth, setViewportWidth] = useState<string>('1440')
   const [linkInteractions, setLinkInteractions] = useState<boolean>(false)
+  const [groupSections, setGroupSections] = useState<boolean>(false)
   const [status, setStatus] = useState<Status>('idle')
   const [statusDetail, setStatusDetail] = useState<string>('')
   const [progress, setProgress] = useState<ImportProgress | null>(null)
@@ -70,6 +71,7 @@ function Plugin() {
         settingsHydrated.current = true
         setViewportWidth(String(settings.viewportWidth))
         setLinkInteractions(Boolean(settings.linkInteractions))
+        setGroupSections(Boolean(settings.groupSections))
       }
     )
     const unsubProgress = on<ImportProgressHandler>('IMPORT_PROGRESS', (p) => {
@@ -106,9 +108,10 @@ function Plugin() {
     if (!settingsHydrated.current) return
     emit<SettingsChangedHandler>('SETTINGS_CHANGED', {
       viewportWidth: Number(viewportWidth),
-      linkInteractions
+      linkInteractions,
+      groupSections
     })
-  }, [viewportWidth, linkInteractions])
+  }, [viewportWidth, linkInteractions, groupSections])
 
   async function handleFileSelected(file: File): Promise<void> {
     setSelectedFile(file)
@@ -168,7 +171,8 @@ function Plugin() {
       setStatus('importing')
       emit<ImportDocumentsHandler>('IMPORT_DOCUMENTS', {
         pages: irs,
-        linkInteractions
+        linkInteractions,
+        groupSections
       })
     } catch (err) {
       setStatus('error')
@@ -301,6 +305,24 @@ function Plugin() {
         >
           Follows internal links (&lt;a href&gt; / buttons) and wires
           frame-to-frame navigation. Multi-page imports (.zip) only.
+        </div>
+        <VerticalSpace space="medium" />
+
+        <SectionLabel>Layout</SectionLabel>
+        <VerticalSpace space="small" />
+        <Checkbox value={groupSections} onValueChange={setGroupSections}>
+          <Text>Group pages into sections</Text>
+        </Checkbox>
+        <VerticalSpace space="extraSmall" />
+        <div
+          style={{
+            fontSize: 11,
+            opacity: 0.6,
+            lineHeight: '16px'
+          }}
+        >
+          Buckets pages by filename prefix (00/01 → section 0, 10/11 →
+          section 1, …) into stacked Figma sections. Multi-page (.zip) only.
         </div>
         <VerticalSpace space="medium" />
 
